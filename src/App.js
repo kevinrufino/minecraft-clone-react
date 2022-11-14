@@ -1,13 +1,11 @@
 import { Physics } from '@react-three/cannon';
 import { Sky } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { Cubes } from './components/Cubes';
 import { FPV } from './components/FPV';
-import { Ground } from './components/Ground';
-import { Player } from './components/Player';
 import { TextureSelector } from './components/TextureSelector';
 import { Menu } from './components/Menu'
 import { Help } from './components/Help';
+import { Scene } from './components/Scene';
 
 function App() {
   return (
@@ -17,9 +15,7 @@ function App() {
         <ambientLight intensity={.5} />
         <FPV />
         <Physics>
-          <Player />
-          <Cubes />
-          <Ground />
+          <Scene />
         </Physics>
       </Canvas>
       <div className='cursor centered absolute'>+</div>
