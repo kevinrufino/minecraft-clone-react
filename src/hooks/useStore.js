@@ -8,6 +8,97 @@ const setLocalStorage = (key, value) => window.localStorage.setItem(key, JSON.st
 export const useStore = create((set, get) => ({
 	texture: 'dirt',
 	cubes: getLocalStorage('cubes') || [],
+
+	socket: null,
+	players:{},
+	playernum: null,
+
+
+	online_addCube: (x, y, z) => {
+		console.log("adding cube")
+		let params ={
+			worldname: null,
+			pos: [x,y,z],
+			key: nanoid(),
+			texture: get().texture,
+
+		}
+		let socket = get().socket
+		if(socket){
+			if(socket.connected){
+				socket.emit("C_addBlock",params)
+			}
+		}
+	},
+	online_removeCube: (x, y, z) => {
+		let params ={
+			worldname: null,
+			pos: [x,y,z],
+		}
+		let socket = get().socket
+		if(socket){
+			if(socket.connected){
+				socket.emit("C_removeBlock",params)
+			}
+		}
+	},
+	online_updateCubes:(cubes)=>{
+		set(() => ({
+			cubes
+		}))
+	},
+	online_Addsocket: (s)=>{
+		set(() => ({
+			socket: s
+		}))
+	},
+	online_resetWorld: ()=>{
+		console.log("reset world")
+		let params ={
+			worldname: null,
+		}
+		let socket = get().socket
+		if(socket){
+			if(socket.connected){
+				socket.emit("C_resetBlocks",params)
+			}
+		}
+	},
+	online_sendPos:(pos)=>{
+		// console.log("sending move")
+		let playernum = get().playernum
+		let params ={
+			worldname: null,
+			playernum,
+			pos,
+
+		}
+		let socket = get().socket
+		if(socket){
+			if(socket.connected){
+				socket.emit("C_UpdateMove",params)
+			}
+		}
+	},
+	online_setPlayersPos:(allplayersmap)=>{
+		let playernum = get().playernum
+		delete allplayersmap[playernum]
+		set(()=>({	
+			players:{...allplayersmap}
+		}))
+	},
+	online_setplayerNum:(playernum)=>{
+		set(() => ({
+			playernum
+		}))
+	},
+
+
+
+
+
+
+
 	addCube: (x, y, z) => {
 		set((prev) => ({
 			cubes: [

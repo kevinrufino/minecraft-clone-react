@@ -2,7 +2,9 @@ import { useSphere } from "@react-three/cannon";
 import { useFrame, useThree } from "@react-three/fiber"
 import { useEffect, useRef } from "react";
 import { Vector3 } from "three";
+import settings from "../devOnline";
 import { useKeyboard } from "../hooks/useKeyboard";
+import { useStore } from "../hooks/useStore";
 
 const JUMP_HIEGHT = 4;
 const SPEED = 4;
@@ -29,12 +31,20 @@ export const Player = () => {
     }, [api.velocity])
 
     const pos = useRef([0,0,0])
+    const [socket,online_sendPos] = useStore((state)=>[state.socket,state.online_sendPos])
     // wtf is this?
     useEffect(() => {
         api.position.subscribe((p) => pos.current = p)
     }, [api.position])
-
+    
     useFrame(() => {
+
+        if(settings.online){
+            if(socket.connected){
+                    online_sendPos(pos.current)
+            }
+        }
+
         // camera follows "player"
         camera.position.copy(new Vector3(
             pos.current[0],
@@ -68,8 +78,13 @@ export const Player = () => {
     })
 
     return (
-        <mesh ref={ref}>
+        <group ref={ref}>
 
+        <mesh>
+            {/* <boxGeometry attach="geometry" args={[5,5,5]}/> */}
+            {/* <sphereGeometry attach="geometry" args={[5]}/>
+            <meshStandardMaterial attach="material" color="white" /> */}
         </mesh>
+        </group>
     )
 }

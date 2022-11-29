@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { Player } from './Player'
 import { Ground } from './Ground';
 import { Cubes } from './Cubes';
+import { OtherPlayers } from './OtherPlayers';
 
 extend({ RenderPixelatedPass })
 
@@ -15,11 +16,12 @@ export const Scene = () => {
     return (
         <>
             <Player />
+            <OtherPlayers />
             <Cubes />
             <Ground />
-            <Effects>
+            {/* <Effects>
                 <renderPixelatedPass args={[resolution, 6, scene, camera, { normalEdgeStrength: 1, depthEdgeStrength: 1 }]} />
-            </Effects>
+            </Effects> */}
         </>
     )
 }
