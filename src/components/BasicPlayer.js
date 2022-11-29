@@ -12,14 +12,14 @@ export const Basicplayer = ({mypos}) => {
     }))
 
 
-    useFrame (() => {
-        // console.log(ref.current.position)
-        api.position.x = mypos[0]
-        // ref.current.position.ya]
-        api.position.z = mypos[2]
-        console.log(api.position)
+    // useFrame (() => {
+    //     // console.log(ref.current.position)
+    //     // api.position.x = mypos[0]
+    //     // ref.current.position.ya]
+    //     // api.position.z = mypos[2]
+    //     // console.log(api.position)
 
-    })
+    // })
     // useEffect(()=>{},[mypos])
 
     return (
@@ -27,9 +27,10 @@ export const Basicplayer = ({mypos}) => {
         {/* // <group ref={ref} position={[2,2,2]}> */}
              {/* <mesh position={mypos} > */}
             {/* <mesh ref={ref} > */}
-            <mesh ref={ref}>
+            {/* <mesh ref={ref}> */}
+            <mesh position={mypos}>
                 <sphereGeometry attach="geometry" args={[1]}/>
-                <meshStandardMaterial attach="material" color="green" />
+                <meshStandardMaterial attach="material" color="red" />
             </mesh>
         {/* // </group> */}
         </>

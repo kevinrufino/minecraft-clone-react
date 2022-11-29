@@ -1,7 +1,8 @@
 
 
 const settings= {
-    online: false
+    online: true,
+    herokuserver: true
 }
 
 

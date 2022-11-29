@@ -11,8 +11,8 @@ import { useEffect, useState } from 'react';
 import { useStore } from './hooks/useStore';
 import settings from './devOnline';
 
-// const ENDPOINT = (false)?'https://connect4x4-server.herokuapp.com/':"http://localhost:5000"
-const ENDPOINT = "http://localhost:5000"
+const ENDPOINT = settings.herokuserver?'https://ghk-cpminecraft.herokuapp.com/':"http://localhost:5000"
+// const ENDPOINT = settings.herokuserver?'https://ghk-reactminecraftcloneserver.onrender.com':"http://localhost:5000"
 
 function App() {
   const [greg_Addsocket,socket,online_updateCubes,online_setplayerNum,online_setPlayersPos] = useStore ((state) => [state.online_Addsocket,state.socket,state.online_updateCubes,state.online_setplayerNum,state.online_setPlayersPos])
