@@ -13,6 +13,28 @@ export const useStore = create((set, get) => ({
 	players:{},
 	playernum: null,
 
+	AllBlocks:[{
+		'0.0.0':{'pos':[0,0,0],'texture':'log'},
+		/* 
+		example entry
+		'0.0.0':{
+			'pos':[0,0,0],
+			// font back left right top bottom
+			'showface':[true,true,true,false,false,false],
+			texture: 'wood'
+		}
+		*/
+	}],
+	updateAllBlocks:(data)=>{
+		set(() => ({
+			AllBlocks:[data]
+		}))
+	},
+	getAllBlocks:()=>{
+		return get().AllBlocks[0]
+	},
+
+
 
 	online_addCube: (x, y, z) => {
 		console.log("adding cube")

@@ -6,10 +6,10 @@ import settings from "../devOnline";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useStore } from "../hooks/useStore";
 
-const JUMP_HIEGHT = 4;
+const JUMP_HIEGHT = 8;
 const SPEED = 4;
 
-export const Player = () => {
+export const Player = ({myradius = .5}) => {
     const { camera } = useThree();
     const { 
         moveBackward,
@@ -21,48 +21,19 @@ export const Player = () => {
     const [ref, api] = useSphere(() => ({
         mass: 1,
         type: 'Dynamic',
-        position: [0,1,0]
+        position: [0,5,0],
+        args:[myradius]
     }))
 
     const vel = useRef([0,0,0])
-    // wtf is this?
-    useEffect(() => {
-        api.velocity.subscribe((v) => vel.current = v)
-    }, [api.velocity])
-
     const pos = useRef([0,0,0])
     const [socket,online_sendPos] = useStore((state)=>[state.socket,state.online_sendPos])
-    // wtf is this?
-    useEffect(() => {
-        api.position.subscribe((p) => pos.current = p)
-    }, [api.position])
-    
-    useFrame(() => {
 
-        if(settings.online){
-            if(socket.connected){
-                    online_sendPos(pos.current)
-            }
-        }
 
-        // camera follows "player"
-        camera.position.copy(new Vector3(
-            pos.current[0],
-            pos.current[1],
-            pos.current[2]
-        ))
-
+    function doMovement(){
         const direction = new Vector3()
-        const frontVector = new Vector3(
-            0,
-            0,
-            (moveBackward ? 1 : 0) - (moveForward ? 1 : 0)
-        )
-        const sideVector = new Vector3(
-            (moveLeft ? 1 : 0) - (moveRight ? 1 : 0),
-            0,
-            0
-        )
+        const frontVector = new Vector3(0,0,(moveBackward ? 1 : 0) - (moveForward ? 1 : 0))
+        const sideVector = new Vector3( (moveLeft ? 1 : 0) - (moveRight ? 1 : 0), 0, 0 )
         direction
             .subVectors(frontVector, sideVector)
             .normalize()
@@ -75,16 +46,55 @@ export const Player = () => {
         if (jump && Math.abs(vel.current[1]) < .05) {
             api.velocity.set(vel.current[0], JUMP_HIEGHT, vel.current[2])
         }
+        // camera follows "player"
+        if(!settings.ignoreCameraFollowPlayer){
+
+            camera.position.copy(new Vector3(
+                pos.current[0],
+                pos.current[1],
+                pos.current[2]
+                ))
+            }
+    }
+
+    function doOnlinePlayerPos(){
+        if(settings.online){
+            if(socket.connected){
+                    online_sendPos(pos.current)
+            }
+        }
+    }
+
+    // wtf is this?
+    useEffect(() => {
+        api.velocity.subscribe((v) => vel.current = v)
+    }, [api.velocity])
+    // wtf is this?
+    useEffect(() => {
+        api.position.subscribe((p) => pos.current = p)
+    }, [api.position])
+    
+
+    useFrame(() => {
+        doOnlinePlayerPos()
+        doMovement()
     })
 
-    return (
-        <group ref={ref}>
+    // function giveShape(){
+    //     if(ref.current){
+    //         return <>
+    //         </>
+    //     }
 
-        <mesh>
+    // }
+
+    return (
+
+
+        <mesh  ref={ref}>
             {/* <boxGeometry attach="geometry" args={[5,5,5]}/> */}
-            {/* <sphereGeometry attach="geometry" args={[5]}/>
-            <meshStandardMaterial attach="material" color="white" /> */}
+            <sphereGeometry attach="geometry" args={[myradius]}/>
+            <meshStandardMaterial attach="material" color="orange" />
         </mesh>
-        </group>
     )
 }

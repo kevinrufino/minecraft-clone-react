@@ -3,6 +3,7 @@ import grassImg from './grass.jpg';
 import glassImg from './glass.png';
 import logImg from './log.jpg';
 import woodImg from './wood.png';
+import allMinecraft from './allMinecraft.jpeg'
 
 export {
 	dirtImg,
@@ -10,4 +11,5 @@ export {
 	glassImg,
 	woodImg,
 	logImg,
+	allMinecraft
 }

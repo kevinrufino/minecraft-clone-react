@@ -1,0 +1,12 @@
+
+
+
+
+
+
+export const NadaSpace = ()=>{
+
+    return (<></>)
+
+
+}
