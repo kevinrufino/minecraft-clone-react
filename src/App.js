@@ -11,7 +11,6 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "./hooks/useStore";
 import settings from "./devOnline";
 import { OrbitControls } from "@react-three/drei";
-import { HelpMeProfileProvider } from "./contexts/HelpMeProfile";
 import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineConnection";
 
 function App() {
