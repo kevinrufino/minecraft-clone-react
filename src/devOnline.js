@@ -3,19 +3,19 @@
 const settings= {
     online: false,
     herokuserver: false,
-    useOrbitals:false,
+    useOrbitals:true,
 
-    hidePlayer: false,
+    hidePlayer: true,
     hideOtherPlayers: true,
-    ignoreCameraFollowPlayer: false,
+    ignoreCameraFollowPlayer: true,
 
-
-    hideGround: false,
+    hideSky: true,
+    hideGround: true,
     hideCubes:false,
     hideCubeRigidBodyLines: true, //doesn't work yet
-    ignoreCubeRigidBody: false,
-    hideTextSelect: false,
-    hideUIContent:false,
+    ignoreCubeRigidBody: true,
+    hideTextSelect: true,
+    hideUIContent:true,
 
     
     activeTexture: 'AllMinecraftTexture'
@@ -35,7 +35,7 @@ hidePlayer: false,
 hideOtherPlayers: true,
 ignoreCameraFollowPlayer: false,
 
-
+hideSky: false,
 hideGround: false,
 hideCubes:false,
 hideCubeRigidBody: false,
