@@ -1,123 +1,65 @@
-import { Physics } from '@react-three/cannon';
-import { Sky } from '@react-three/drei';
-import { Canvas } from '@react-three/fiber';
-import { FPV } from './components/FPV';
-import { TextureSelector } from './components/TextureSelector';
-import { Menu } from './components/Menu'
-import { Help } from './components/Help';
-import { Scene } from './components/Scene';
-import io from 'socket.io-client'
-import { useEffect, useState } from 'react';
-import { useStore } from './hooks/useStore';
-import settings from './devOnline';
+import { Debug, Physics } from "@react-three/cannon";
+import { Sky } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import { FPV } from "./components/FPV";
+import { TextureSelector } from "./components/TextureSelector";
+import { Menu } from "./components/Menu";
+import { Help } from "./components/Help";
+import { Scene } from "./components/Scene";
 
-const ENDPOINT = settings.herokuserver?'https://ghk-cpminecraft.herokuapp.com/':"http://localhost:5000"
-// const ENDPOINT = settings.herokuserver?'https://ghk-reactminecraftcloneserver.onrender.com':"http://localhost:5000"
+import { useEffect, useRef, useState } from "react";
+import { useStore } from "./hooks/useStore";
+import settings from "./devOnline";
+import { OrbitControls } from "@react-three/drei";
+import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineConnection";
 
 function App() {
-  const [greg_Addsocket,socket,online_updateCubes,online_setplayerNum,online_setPlayersPos] = useStore ((state) => [state.online_Addsocket,state.socket,state.online_updateCubes,state.online_setplayerNum,state.online_setPlayersPos])
+  const [establishedConn] = useStore((state) => [state.establishedConn]);
 
-  // const [socket,setSocket] =useState();
-  const [conn,setConn] = useState(false);
-  
-  useEffect(()=>{
-    console.log("#####-----##### SocketProvider 1 ")
-    console.log("socket: ",socket)
-    // console.log("the cubes: ",cubes)
-    
-    if(settings.online){
-      if(socket){
-        console.log("HELLO?",socket.connected)
-          
-          socket.on('S_GiveWorld',(world)=>{
-            console.log("given world: ",world)
-            online_updateCubes(world.cubes)
-            online_setPlayersPos(world.players)
-            setConn(true)
-          });
-          // socket.on('S_WorldUpdateCubes',(cubes)=>{
-          //   console.log("cubes: ",cubes)
-          //   online_updateCubes(cubes)
-          // });
-          socket.on('S_GiveplayerNum',(pnum)=>{
-            console.log("given pnum; ",pnum)
-            online_setplayerNum(pnum)
-          });
-          socket.on('S_HeartBeat',(world)=>{
-            online_updateCubes(world.cubes)
-            online_setPlayersPos(world.players)
-          })
-        }
-    }
+  const activeTextureREF = useRef("dirt");
 
-    if(!settings.online && !conn){
-      setConn(true)
-    }
-      
-    },[socket])
-    
-    //making connection
-    useEffect(()=>{
-      console.log("#####-----##### SocketProvider 2 ")
-      if(settings.online){
-      
-        const connectionOptions =  {
-            "forceNew" : true,
-            "reconnectionAttempts": "5", 
-            "timeout" : 10000,                  
-            "transports" : ["websocket"]
-        }
-        const newSocket = io.connect(ENDPOINT,connectionOptions);
-        console.log("newsocket",newSocket)
-        // setSocket(newSocket);
-        greg_Addsocket(newSocket)
-    
-  
-  
-        return () => newSocket.close() //this is the clean up function
-      }
-    },[])
-
-
-  function goToGame(){
-    return(
+  function gettingWorldLoadScreen() {
+    //this is meant to be a place holder for a potential loading screen as we generate enough of the world before the player.
+    //also a waiting screen for when some one is waiting to connect to online server
+    return (
       <>
-      <Canvas>
-        <Sky sunPosition={[100, 100, 20]}/>
-        <ambientLight intensity={.5} />
-        <FPV />
-        <Physics>
-          <Scene />
-        </Physics>
-      </Canvas>
-      <div className='cursor centered absolute'>+</div>
-      <TextureSelector />
-      <Menu />
-      <Help />
-    </>
-    )
-  }
-
-  function gettingWorld(){
-    return(
-      <>
-      <div>
-        gettingWorld
-      </div>
+        <div>gettingWorld</div>
+        <MakeOnlineConnection />
       </>
-    )
+    );
   }
 
+  function goToGame() {
+    return (
+      <>
+        <Canvas camera={{ position: [-5, 10, -5] }}>
+          {settings.hideSky ? <></> : <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
+          <ambientLight intensity={0.5} />
+          {settings.hidePlayer ? <></> : <FPV />}
+          <Physics>
+            {/* <Debug color="red" scale={1}  > */}
+            <Scene activeTextureREF={activeTextureREF} />
+            {/* </Debug> */}
+          </Physics>
+          {settings.useOrbitals ? <OrbitControls /> : <></>}
+          <axesHelper name={"axesHelper"} scale={10} />
+        </Canvas>
+        {settings.ignoreCameraFollowPlayer ? <></> : <div className="cursor centered absolute">+</div>}
+        {settings.hideUIContent ? (
+          <></>
+        ) : (
+          <>
+            <Menu />
+            <Help />
+          </>
+        )}
 
+        {settings.hideTextSelect ? <></> : <TextureSelector activeTextureREF={activeTextureREF} />}
+      </>
+    );
+  }
 
-  return (
-
-    conn?
-    goToGame()
-    :
-    gettingWorld()
-
-  );
+  return establishedConn ? goToGame() : gettingWorldLoadScreen();
 }
 
 export default App;

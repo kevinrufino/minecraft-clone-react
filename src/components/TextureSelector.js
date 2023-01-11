@@ -11,7 +11,7 @@ const images = {
 	log: logImg,
 }
 
-export const TextureSelector = () => {
+export const TextureSelector = ({activeTexturePatchFix}) => {
     const [activeTexture, setTexture] = useStore((state) => [state.texture, state.setTexture])
     const {
         dirt,
@@ -44,13 +44,16 @@ export const TextureSelector = () => {
             let arrayPos = texturesArray.indexOf(activeTexture);
             if (delta === -1 && arrayPos-1 > -1 ) {
                 setTexture(texturesArray[arrayPos - 1])
+                activeTexturePatchFix.current = texturesArray[arrayPos-1]
             }
             if (delta === 1 && arrayPos+1 < 5 ) {
                 setTexture(texturesArray[arrayPos + 1])
+                activeTexturePatchFix.current = texturesArray[arrayPos+1]
             }
         });
         if (pressedTexture) {
             setTexture(pressedTexture[0])
+            activeTexturePatchFix.current = pressedTexture[0]
         }
     }, [setTexture, dirt, grass, glass, wood, log, activeTexture])
 
