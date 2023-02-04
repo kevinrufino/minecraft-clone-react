@@ -14,9 +14,10 @@ import { OrbitControls } from "@react-three/drei";
 import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineConnection";
 
 function App() {
+  console.log('----- the whole app???')
   const [establishedConn] = useStore((state) => [state.establishedConn]);
-
   const activeTextureREF = useRef("dirt");
+  
 
   function gettingWorldLoadScreen() {
     //this is meant to be a place holder for a potential loading screen as we generate enough of the world before the player.
@@ -45,9 +46,7 @@ function App() {
           <axesHelper name={"axesHelper"} scale={10} />
         </Canvas>
         {settings.ignoreCameraFollowPlayer ? <></> : <div className="cursor centered absolute">+</div>}
-        {settings.hideUIContent ? (
-          <></>
-        ) : (
+        {settings.hideUIContent ? (<></>) : (
           <>
             <Menu />
             <Help />

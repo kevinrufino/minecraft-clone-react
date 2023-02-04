@@ -5,253 +5,151 @@ import { useStore } from "../../hooks/useStore";
 import * as THREE from "three";
 import { DrawCubesGeo } from "./DrawCubesGeo";
 
-export const FormCubeArrays = ({ activeTextureREF }) => {
-  const [getAllBlocks, updateAllBlocks] = useStore((state) => [state.getAllBlocks, state.updateAllBlocks]);
-  const [dataCont, setDataCont] = useState([]);
-  const { camera, scene } = useThree();
-  const addedblocks = useRef(false);
-  const cubeCount = useRef(0);
-  const cubeFaceIndexesREF = useRef({});
+export const FormCubeArrays = ({ activeTextureREF, chunkblocks, chunkindex,clickCubeFace, REF_ALLCUBES,cubeFaceIndexesREF }) => {
+  // console.log('calc cube array:',chunkindex,chunkblocks)
+  // const [getAllBlocks, updateAllBlocks] = useStore((state) => [state.getAllBlocks, state.updateAllBlocks]);
+  const [dataCont, setDataCont] = useState([{cc:0}]);
+  const DC_delayRef = useRef(0)
 
-  function makeFaceIndexMapObject(cen, nx, ny, nz) {
-    return {
-      remove: cen,
-      add: {
-        key: makeKey(nx, ny, nz),
-        pos: [nx, ny, nz],
-      },
-    };
-  }
+  // const cubeCount = useRef(0);
+  
 
-  function genFaceArrays(t, allkeys, blocks) {
-    let t2 = 2 * t;
-    let vertices = [];
-    let uvs = [];
-    let normals = [];
 
-    let uvSize = 1 / 2 / 2 / 2 / 2;
-    let faceindexmap = {
-      // 0:{
-      //   remove:'1.0.1',
-      //   add:{
-      //     key: '1.2.1',
-      //     pos: [x, y, z]
-      //   },
-      // }
-    };
-    let facemapcount = 0;
 
-    allkeys.forEach((cen) => {
-      let [nx, ny, nz] = cen.split(".");
-      let [x, y, z] = blocks[cen].pos;
-      let showfaces = [false, false, false, false, false, false];
-      let currtexture = blocks[cen].texture;
-      let uvL = (textures["AMTmap"][currtexture][0] - 1) * uvSize;
-      let uvB = (textures["AMTmap"][currtexture][1] - 1) * uvSize;
 
-      let onefaceuv = [
-        //uv means UxV meaning (u,v) meaning u is the x cordinate v is the y
-        uvL + uvSize,
-        uvB + 0,
-        uvL + uvSize,
-        uvB + uvSize,
-        uvL + 0,
-        uvB + 0,
-        uvL + 0,
-        uvB + 0,
-        uvL + uvSize,
-        uvB + uvSize,
-        uvL + 0,
-        uvB + uvSize,
-      ];
-
-      nx = Number(nx);
-      ny = Number(ny);
-      nz = Number(nz);
-
-      let c = {}; // c = corners
-      c[1] = [x + t, y - t, z + t];
-      c[2] = [x - t, y - t, z + t];
-      c[3] = [x - t, y + t, z + t];
-      c[4] = [x + t, y + t, z + t];
-      c[5] = [x + t, y - t, z - t];
-      c[6] = [x - t, y - t, z - t];
-      c[7] = [x - t, y + t, z - t];
-      c[8] = [x + t, y + t, z - t];
-
-      let dbstr = "";
-
-      // //front
-      if (!blocks[makeKey(nx, ny, nz + t2)]) {
-        showfaces[0] = true;
-        vertices.push(...c[1], ...c[4], ...c[2]);
-        vertices.push(...c[2], ...c[4], ...c[3]);
-        normals.push(0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1);
-        uvs.push(...onefaceuv);
-        dbstr = dbstr + "front\n";
-        faceindexmap[facemapcount] = makeFaceIndexMapObject(cen, nx, ny, nz + 1);
-        facemapcount += 2;
-      }
-      // //back
-      if (!blocks[makeKey(nx, ny, nz - t2)]) {
-        vertices.push(...c[6], ...c[7], ...c[5]);
-        vertices.push(...c[5], ...c[7], ...c[8]);
-        normals.push(0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1);
-        uvs.push(...onefaceuv);
-        dbstr = dbstr + "back\n";
-        faceindexmap[facemapcount] = makeFaceIndexMapObject(cen, nx, ny, nz - 1);
-        facemapcount += 2;
-      }
-      // //left
-      if (!blocks[makeKey(nx - t2, ny, nz)]) {
-        vertices.push(...c[2], ...c[3], ...c[6]);
-        vertices.push(...c[6], ...c[3], ...c[7]);
-        normals.push(1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0);
-        uvs.push(...onefaceuv);
-        dbstr = dbstr + "left\n";
-        faceindexmap[facemapcount] = makeFaceIndexMapObject(cen, nx - 1, ny, nz);
-        facemapcount += 2;
-      }
-      // //right
-      if (!blocks[makeKey(nx + t2, ny, nz)]) {
-        vertices.push(...c[5], ...c[8], ...c[1]);
-        vertices.push(...c[1], ...c[8], ...c[4]);
-        normals.push(1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0);
-        uvs.push(...onefaceuv);
-        dbstr = dbstr + "right\n";
-        faceindexmap[facemapcount] = makeFaceIndexMapObject(cen, nx + 1, ny, nz);
-        facemapcount += 2;
-      }
-      // //top
-      if (!blocks[makeKey(nx, ny + t2, nz)]) {
-        vertices.push(...c[4], ...c[8], ...c[3]);
-        vertices.push(...c[3], ...c[8], ...c[7]);
-        normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
-        uvs.push(...onefaceuv);
-        dbstr = dbstr + "top\n";
-        faceindexmap[facemapcount] = makeFaceIndexMapObject(cen, nx, ny + 1, nz);
-        facemapcount += 2;
-      }
-      // //bot
-      if (!blocks[makeKey(nx, ny - t2, nz)]) {
-        vertices.push(...c[5], ...c[1], ...c[6]);
-        vertices.push(...c[6], ...c[1], ...c[2]);
-        normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
-        uvs.push(...onefaceuv);
-        dbstr = dbstr + "bot\n";
-        faceindexmap[facemapcount] = makeFaceIndexMapObject(cen, nx, ny - 1, nz);
-        facemapcount += 2;
-      }
-
-      blocks[cen].showface = showfaces;
-    });
-
-    cubeFaceIndexesREF.current = faceindexmap;
-
-    return [vertices, uvs, normals];
-  }
 
   function makeKey(x, y, z) {
     return x + "." + y + "." + z;
   }
 
-  function updateDataContainer(blocks) {
-    let t = 0.5;
-    let allkeys = Object.keys(blocks);
-    let [vertices, uvs, normals, faceTextures] = genFaceArrays(t, allkeys, blocks);
-    vertices = new Float32Array(vertices);
-    uvs = new Float32Array(uvs);
-    normals = new Float32Array(normals);
+  // function updateDataContainer(blocks) {
+  //   let t = 0.5;
+  //   // let allkeys = Object.keys(blocks);
+  //   // let [vertices, uvs, normals] = genFaceArrays(t, blocks);
+  //   // console.log(vertices.length/3)
+  //   vertices = new Float32Array(vertices);
+  //   uvs = new Float32Array(uvs);
+  //   normals = new Float32Array(normals);
 
-    let newAC = [];
+  //   let newAC = [];
 
-    newAC.push({
-      vertices,
-      normals,
-      uvs,
-      allkeys,
-    });
-    setDataCont(newAC);
-  }
+  //   // newAC.push({
+  //   //   vertices,
+  //   //   normals,
+  //   //   uvs,
+  //   //   // allkeys,
+  //   // });
+  //   // setDataCont(newAC);
+  //   return [{
+  //     vertices,
+  //     normals,
+  //     uvs,
+  //     // allkeys,
+  //   }]
+  // }
 
-  function clickCubeFace(e) {
-    // e.preventDefault()
-    e.stopPropagation(); //click cannot be passed through cube face
-    var raycaster = new THREE.Raycaster();
-    var mouse = new THREE.Vector2();
-    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
+  const runWorker = (num) => {
+    // dispatch({ type: "SET_ERROR", err: "" });
+    const worker = new window.Worker('./webworker.js')
+    worker.postMessage({ num });
+    worker.onerror = (err) => err;
+    worker.onmessage = (e) => {
+      const { res } = e.data;
+      // dispatch({
+      //   type: "UPDATE_FIBO",
+      //   id,
+      //   time,
+      //   fibNum,
+      // });
+      console.log("YOOOOOOOOOOOOOOOOOOOOOOOOOO THE RES IS:",res)
+      worker.terminate();
+    };
+  };
 
-    let intersect = raycaster.intersectObjects(scene.children);
+  const myactualrunWorker = (t,blocks,chunkblocks) => {
+    // dispatch({ type: "SET_ERROR", err: "" });
+    const worker = new window.Worker('./myactualworker.js')
+    console.log('Workstart ----')
+    worker.postMessage({ t,blocks,chunkblocks });
+    worker.onerror = (err) => err;
+    worker.onmessage = (e) => {
+      let { vertices, uvs, normals, faceindexmap, count } = e.data;
+      // console.log('data:',vertices, uvs, normals, faceindexmap)
+      console.log(`Worker Response ------`)
+      console.log('data:',vertices.length, count )
+      // dispatch({
+      //   type: "UPDATE_FIBO",
+      //   id,
+      //   time,
+      //   fibNum,
+      // });
+      vertices = new Float32Array(vertices);
+      uvs = new Float32Array(uvs);
+      normals = new Float32Array(normals);
+      cubeFaceIndexesREF.current = faceindexmap;
+      // console.log("YOOOOOOOOOOOOOOOOOOOOOOOOOO THE RES IS:",res)
+      setDataCont([{ cc:count,vertices, uvs, normals}])
+      worker.terminate();
+    };
+  };
 
-    intersect = intersect.filter((inter) => {
-      return inter.object.name == "cubesMesh2";
-    });
-
-    if (intersect.length > 0) {
-      let currBlocks = getAllBlocks();
-
-      let f_Index = intersect[0].faceIndex;
-      f_Index = f_Index - (f_Index % 2);
-
-      let currTexture = activeTextureREF.current;
-
-      if (e.which === 1) {
-        let newblock = cubeFaceIndexesREF.current[f_Index].add;
-        currBlocks[newblock.key] = { pos: newblock.pos, texture: currTexture };
-        updateAllBlocks(currBlocks);
+  useFrame(()=>{
+      let t = .5
+      if(chunkblocks.count!=DC_delayRef.current){
+        console.log('saw differences in uframe',chunkblocks.count,DC_delayRef.current,dataCont[0].cc)
+        DC_delayRef.current = chunkblocks.count
+        myactualrunWorker(t,REF_ALLCUBES.current,chunkblocks)
       }
+  })
+  
 
-      if (e.which === 3) {
-        let remove = cubeFaceIndexesREF.current[f_Index].remove;
-        delete currBlocks[remove];
-        updateAllBlocks(currBlocks);
-      }
-    }
-  }
+  useEffect(()=>{
+    let t = .5
+    console.log('current counts differences:',chunkblocks.count,DC_delayRef.current,dataCont[0].cc)
+    // if(once){
+    //   // runWorker(6000000)
+    //   console.log(`---------------------------changing once`)
+    //   setOnce(false)
+    // }
+    // console.log(`chunkblocks:`,chunkblocks)
+    // myactualrunWorker(t,REF_ALLCUBES.current,chunkblocks)
+  },[])
 
-  useFrame(() => {
-    let currentBlocks = getAllBlocks();
-    let blockkeys = Object.keys(currentBlocks);
-    if (cubeCount.current != blockkeys.length) {
-      cubeCount.current = blockkeys.length;
-      updateDataContainer(currentBlocks);
-    }
-  });
+  function handledata(){
 
-  //add bulk cubes for testing
-  useEffect(() => {
-    //this useeffect is for setup a bulk of cubes to test rendor
-    //only happens once
-    // can be ignored by settings addedblocks to true at the top
-    if (!addedblocks.current) {
-        let start = {};
-        let xs = 10;
-        let ys = 1;
-        let zs = 10;
-        let t = 0.5;
-        let key = "";
-
-        for (let x = 0; x < xs; x++) {
-          for (let y = 0; y < ys; y++) {
-            for (let z = 0; z < zs; z++) {
-              key = makeKey(x, y, z);
-              start[key] = {
-                pos: [x, y, z],
-                texture: "grass",
-              };
-            }
-          }
+    console.log('rendering DC with cube count:',dataCont[0].cc)
+    console.log(chunkblocks)
+    if(dataCont[0]){
+      if(dataCont[0].vertices){
+        if(dataCont[0].vertices.length>0){
+          return (
+            dataCont.map((inst, ind) => {
+              console.log('yeah boy key',`ACmesh${dataCont[0].cc}-${chunkindex}-${ind}`)
+              return <DrawCubesGeo info={inst} key={`ACmesh${dataCont[0].cc}-${chunkindex}-${ind}`} clickCubeFace={clickCubeFace} />;
+            })
+          )
         }
-
-        updateAllBlocks(start);
-
-      addedblocks.current = true;
+      }
     }
-  }, []);
 
-  return dataCont.map((inst, ind, full) => {
-    return <DrawCubesGeo info={inst} key={`ACmesh${cubeCount.current}-` + ind} clickCubeFace={clickCubeFace} />;
-  });
+    return <></>
+
+
+  }
+
+
+  // return updateDataContainer(getAllBlocks()).map((inst, ind, full) => {
+  //   // console.log('yeah boy')
+  //   return <DrawCubesGeo info={inst} key={`ACmesh${chunkblocks.count}-${chunkindex}` + ind} clickCubeFace={clickCubeFace} />;
+  // });
+
+
+  // return updateDataContainer(REF_ALLCUBES.current).map((inst, ind, full) => {
+  //   // console.log('yeah boy')
+  //   return <DrawCubesGeo info={inst} key={`ACmesh${chunkblocks.count}-${chunkindex}` + ind} clickCubeFace={clickCubeFace} />;
+  // });
+
+  return(
+    handledata()
+  )
 };
