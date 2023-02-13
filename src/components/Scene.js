@@ -26,8 +26,8 @@ export const Scene = ({ activeTextureREF }) => {
   //adjusting camera
   useFrame((state)=>{
 
-    // state.camera.lookAt(1,0,1)
-    // state.camera.position.lerp(new THREE.Vector3(-2,5,-2),1)
+    // state.camera.lookAt(20,0,20)
+    // state.camera.position.lerp(new THREE.Vector3(1,500,1),1)
 
   })
 

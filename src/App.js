@@ -14,7 +14,7 @@ import { OrbitControls } from "@react-three/drei";
 import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineConnection";
 
 function App() {
-  console.log('----- the whole app???')
+  // console.log('----- the whole app???')
   const [establishedConn] = useStore((state) => [state.establishedConn]);
   const activeTextureREF = useRef("dirt");
   

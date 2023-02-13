@@ -1,14 +1,14 @@
 const fib = (n) => (n < 2 ? n : fib(n - 1) + fib(n - 2));
 
 onmessage = (e) => {
-  const { t, blocks,chunkblocks } = e.data;
+  const { t, blocks,chunkblocks,chunknumber } = e.data;
   let count = chunkblocks.count
 //   const startTime = new Date().getTime();
 // let res=new Array(num).fill(0)
 //   const fibNum = fib(num);
     let [vertices, uvs, normals, faceindexmap] = genFaceArrays(t, blocks,chunkblocks)
   postMessage({
-    vertices, uvs, normals, faceindexmap, count
+    vertices, uvs, normals, faceindexmap, count, chunknumber
     // time: new Date().getTime() - startTime,
   });
 };
