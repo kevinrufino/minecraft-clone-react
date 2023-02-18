@@ -26,8 +26,15 @@ export const Scene = ({ activeTextureREF }) => {
   //adjusting camera
   useFrame((state)=>{
 
+    //larger birds eye
     // state.camera.lookAt(20,0,20)
     // state.camera.position.lerp(new THREE.Vector3(1,500,1),1)
+    
+    //slant birds eye
+    // state.camera.lookAt(500,0,500)
+    // state.camera.position.lerp(new THREE.Vector3(-5,10,-5),1)
+
+
 
   })
 

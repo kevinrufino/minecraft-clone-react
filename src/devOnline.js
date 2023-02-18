@@ -3,17 +3,17 @@
 const settings= {
     online: false,
     herokuserver: false,
-    useOrbitals:true,
+    useOrbitals:false,
 
-    hidePlayer: true,
+    hidePlayer: false,
     hideOtherPlayers: true,
-    ignoreCameraFollowPlayer: true,
+    ignoreCameraFollowPlayer: false,
 
     hideSky: true,
     hideGround: true,
     hideCubes:false,
     hideCubeRigidBodyLines: true, //doesn't work yet
-    ignoreCubeRigidBody: true,
+    ignoreCubeRigidBody: false,
     hideTextSelect: true,
     hideUIContent:true,
 

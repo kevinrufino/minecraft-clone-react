@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../hooks/useStore";
 import { Chunk } from "./Chunk";
 import { TestPlaceHolder } from "./TestPlaceHolder";
+import { createNoise2D } from "simplex-noise";
+import alea from "alea";
 
 // https://www.smashingmagazine.com/2020/10/tasks-react-app-web-workers/
 
@@ -44,7 +46,7 @@ export const Cubes = ({ activeTextureREF,REF_ALLCUBES }) => {
     worker.onmessage = (e) => {
       let { vertices, uvs, normals, faceindexmap, count, chunknumber } = e.data;
       // console.log('data:',vertices, uvs, normals, faceindexmap)
-      console.log(`Worker (${id}) Response ------ for ${chunknumber}`)
+      // console.log(`Worker (${id}) Response ------ for ${chunknumber}`)
       // console.log('data:',vertices.length, count )
       // dispatch({
         //   type: "UPDATE_FIBO",
@@ -122,22 +124,30 @@ export const Cubes = ({ activeTextureREF,REF_ALLCUBES }) => {
     //this useeffect is for setup a bulk of cubes to test rendor
     //only happens once
     // can be ignored by settings addedblocks to true at the top
+    const prng = alea("1000");
+    const noise2D = createNoise2D(prng);
     if (!addedblocks.current) {
       let start = {};
       // let xs = worldCubeSize**2;
       let xs = 16*5
-      let ys = 0;
+      let ys = 1;
       let zs = xs;
       let t = 0.5;
-      let yminus = -200
+      let yminus = 0
       let key = "";
+
+      let test= 0
+      let ty=0
 
       for (let x = 0; x < xs; x++) {
         for (let y = yminus; y < ys; y++) {
           for (let z = 0; z < zs; z++) {
-            key = makeKey(x, y, z);
+            test=(noise2D(x / 100, z / 100) + 1) *5
+            // console.log(test-test%1)
+            ty=test-test%1
+            key = makeKey(x, ty, z);
             start[key] = {
-              pos: [x, y, z],
+              pos: [x, ty, z],
               texture: (Math.abs(x-z)<16)?"wood":"grass",
             };
           }

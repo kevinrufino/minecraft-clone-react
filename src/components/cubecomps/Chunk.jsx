@@ -75,7 +75,7 @@ export const Chunk = ({ chunknum, activeTextureREF, myblocks,REF_ALLCUBES,cubeFa
       useFrame (()=>{
         let t = .5
         if(myblocks.count!=bc.current){
-          console.log('saw differences in uframe',myblocks.count,bc.current,chunkprops.draw.cc)
+          // console.log('saw differences in uframe',myblocks.count,bc.current,chunkprops.draw.cc)
           // DC_delayRef.current = chunkblocks.count
           bc.current=myblocks.count
           addworkerjob(chunknum)
