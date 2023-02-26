@@ -28,6 +28,11 @@ const AMTmap = {
 	'bedrock': [2,15],
 	'glass': [3,5]
 }
+const AMTmapbyheight={
+	'0':[8,11],
+	'1':[3,16],
+	'2':[3,5],
+}
 
 dirtTexture.magFilter = NearestFilter;
 logTexture.magFilter = NearestFilter;
@@ -47,5 +52,6 @@ export {
 	woodTexture,
 	groundTexture,
 	allMincraftTexture,
-	AMTmap
+	AMTmap,
+	AMTmapbyheight
 }

@@ -18,32 +18,33 @@ export const Scene = ({ activeTextureREF }) => {
   console.log('----this is scene')
   const { size, scene, camera } = useThree();
   const resolution = useMemo(() => new THREE.Vector2(size.width, size.height), [size]);
-  const REF_ALLCUBES = useRef({"0.0.0": { pos: [0, 0, 0], texture: "log" }} )
+  const REF_ALLCUBES = useRef({"0.0.0": { pos: [0, 0, 0], texture: "log" }})
 
 
 
 
-  //adjusting camera
-  useFrame((state)=>{
+  /*
+    adjusting camera: to help see a larger amount of cubes from different views
+  */
+  // useFrame((state)=>{
 
-    //larger birds eye
-    // state.camera.lookAt(20,0,20)
-    // state.camera.position.lerp(new THREE.Vector3(1,500,1),1)
+  //   //larger birds eye
+  //   // state.camera.lookAt(20,0,20)
+  //   // state.camera.position.lerp(new THREE.Vector3(1,500,1),1)
     
-    //slant birds eye
-    // state.camera.lookAt(500,0,500)
-    // state.camera.position.lerp(new THREE.Vector3(-5,10,-5),1)
+  //   //slant birds eye
+  //   // state.camera.lookAt(500,0,500)
+  //   // state.camera.position.lerp(new THREE.Vector3(-5,10,-5),1)
 
 
 
-  })
+  // })
 
 
 
 
   return (
     <>
-    {/* {console.log('cubes',activeTextureREF)} */}
       {settings.hidePlayer ? <></> : <Player />}
       {settings.hideOtherPlayers ? <></> : <OtherPlayers />}
       {settings.hideCubes ? <></> : <Cubes activeTextureREF={activeTextureREF} REF_ALLCUBES={REF_ALLCUBES} />}
