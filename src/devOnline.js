@@ -17,6 +17,8 @@ const settings= {
     hideTextSelect: true,
     hideUIContent:true,
 
+    showtexturesfromcubeheight: true,
+
     
     activeTexture: 'AllMinecraftTexture'
 }
