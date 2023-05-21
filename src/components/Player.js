@@ -8,6 +8,7 @@ import { useStore } from "../hooks/useStore";
 
 const JUMP_HIEGHT = 8;
 const SPEED = 4;
+const QUICKFACTOR = 10;
 
 export const Player = ({myradius = .5}) => {
     const { camera } = useThree();
@@ -16,12 +17,13 @@ export const Player = ({myradius = .5}) => {
         moveForward,
         moveLeft,
         moveRight,
-        jump
+        jump,
+        moveQuick
     } = useKeyboard();
     const [ref, api] = useSphere(() => ({
-        mass: 1,
+        mass: 0,
         type: 'Dynamic',
-        position: [0,50,0],
+        position: [0,2,0],
         args:[myradius]
     }))
 
@@ -37,14 +39,15 @@ export const Player = ({myradius = .5}) => {
         direction
             .subVectors(frontVector, sideVector)
             .normalize()
-            .multiplyScalar(SPEED)
+            .multiplyScalar(SPEED*(moveQuick*QUICKFACTOR+1))
             .applyEuler(camera.rotation)
 
-        api.velocity.set(direction.x, vel.current[1], direction.z)
+        // api.velocity.set(direction.x, vel.current[1], direction.z)
+        api.velocity.set(direction.x, direction.y , direction.z)
 
         // jump
         if (jump && Math.abs(vel.current[1]) < .05) {
-            api.velocity.set(vel.current[0], JUMP_HIEGHT, vel.current[2])
+            api.velocity.set(vel.current[0], vel.current[1] + JUMP_HIEGHT, vel.current[2])
         }
         // camera follows "player"
         if(!settings.ignoreCameraFollowPlayer){
@@ -79,14 +82,6 @@ export const Player = ({myradius = .5}) => {
         doOnlinePlayerPos()
         doMovement()
     })
-
-    // function giveShape(){
-    //     if(ref.current){
-    //         return <>
-    //         </>
-    //     }
-
-    // }
 
     return (
 
