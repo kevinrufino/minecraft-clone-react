@@ -23,7 +23,7 @@ export const Player = ({myradius = .5}) => {
     const [ref, api] = useSphere(() => ({
         mass: 0,
         type: 'Dynamic',
-        position: [0,2,0],
+        position: settings.startingPositionDefault,
         args:[myradius]
     }))
 
@@ -42,22 +42,48 @@ export const Player = ({myradius = .5}) => {
             .multiplyScalar(SPEED*(moveQuick*QUICKFACTOR+1))
             .applyEuler(camera.rotation)
 
-        // api.velocity.set(direction.x, vel.current[1], direction.z)
-        api.velocity.set(direction.x, direction.y , direction.z)
+
+        //stop player from moving into the negatives
+        api.velocity.set(...checkMapLimits(direction))
 
         // jump
         if (jump && Math.abs(vel.current[1]) < .05) {
             api.velocity.set(vel.current[0], vel.current[1] + JUMP_HIEGHT, vel.current[2])
         }
+
         // camera follows "player"
         if(!settings.ignoreCameraFollowPlayer){
-
             camera.position.copy(new Vector3(
                 pos.current[0],
                 pos.current[1],
                 pos.current[2]
                 ))
-            }
+        }
+    }
+
+    function checkMapLimits(direction){
+        let [x,y,z] = [direction.x,direction.y,direction.z]
+
+        if(pos.current[0]<=0.1){
+            x=1
+        }
+        if(pos.current[0]>=255.1){
+            x=-1
+        }
+        if(pos.current[1]<=0.1){
+            y=1
+        }
+        // if(pos.current[1]>=255.1){
+        //     y=-1
+        // }
+        if(pos.current[2]<=0.1){
+            z=1
+        }
+        if(pos.current[2]>=255.1){
+            z=-1
+        }
+
+        return [x,y,z]
     }
 
     function doOnlinePlayerPos(){

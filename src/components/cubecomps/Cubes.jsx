@@ -1,204 +1,210 @@
 import { useEffect, useRef, useState } from "react";
 import { Chunk } from "./Chunk";
-import { createNoise2D } from "simplex-noise";
-import alea from "alea";
+import { useFrame, useThree } from "@react-three/fiber";
 
-export const Cubes = ({ activeTextureREF,REF_ALLCUBES }) => {
+export const Cubes = ({ activeTextureREF, REF_ALLCUBES }) => {
   console.log("-------- rerender Cubes");
-  let worldCubeSize =16; //this squareD is the number of chunks rendered
-  let worldHeight = 1;
+  const { camera } = useThree();
+  let worldCubeSize = 16; //this squareD is the number of chunks in map
+  let viewRadius = 8; //this number is distance from current place chunks are allowed to exist
+  let seed = "robo";
+  let heightFactor = 20;
+  let worldSettings = {
+    "useHeightTextures":true,
+    "showFlatWorld":false,
+    seed,
+    heightFactor
 
-  let workercount = 3; //a set number of workers
-  const priorityorder = useRef(0)
-  const workerpendingjob = useRef([])
-  const workerworking= useRef(new Array(workercount).fill(false))
+  };
 
-  const workerlist = useRef(new Array(workercount).fill(""))
+  let workerCount = 3; //a set number of workers
+  const workerPendingJob = useRef([]);
+  const workerWorking = useRef(new Array(workerCount).fill(false));
+  const workerList = useRef(new Array(workerCount).fill(""));
 
   //used to keep track of what to add or remove when a face is clicked
-  const cubeFaceIndexesREFlist = useRef(new Array(worldCubeSize ** 2).fill({}))
-
-  const chunks = useRef(new Array(worldCubeSize ** 2).fill()); 
+  const cubeFaceIndexesREFlist = useRef(new Array(worldCubeSize ** 2).fill({}));
+  const chunks = useRef(
+    new Array(worldCubeSize ** 2).fill().map(() => {
+      return new Object({ count: 0, draw: { cc: 0, rere: false } });
+    })
+  );
   /* 
     example
     chunks.current is whats  below
       [{
         keys:
         count:
-        draw:{ cc,vertices, uvs, normals}
+        draw:{ cc,vertices, uvs, normals,rere}
       }
       ,...] 
   */
 
-  // used to insure the useEffect deosn't re add the starting cubes
-  const oneTimeBlockLoaderBool = useRef(false);
-  
-
-  function makeKey(x, y, z) {
-    return x + "." + y + "." + z;
-  }
-
   const buildWorker = (id) => {
-    const worker = new window.Worker('./ChunkWorker.js') // task code in public folder
-    worker.onerror = (err) =>{console.log('myWorker Error:',err)};
-    
-    //responsuble for handeling the workers response
-    worker.onmessage = (e) => { 
-      let { vertices, uvs, normals, faceindexmap, count, chunknumber } = e.data;
-      vertices = new Float32Array(vertices);
-      uvs = new Float32Array(uvs);
-      normals = new Float32Array(normals);
-      cubeFaceIndexesREFlist.current[chunknumber] = faceindexmap;
-      chunks.current[chunknumber].draw={cc:count,vertices, uvs, normals, rere:true}
-      // worker.terminate(); //use to kill the workers
-
-      if(workerpendingjob.current.length>0){ //look for more work
-        getpendingjob(id,workerpendingjob.current.shift())
-      }else{
-        workerworking.current[id] = false
-      }
-
+    const worker = new Worker("./dist/publicChunkWorker.js"); // task code in public folder
+    worker.onerror = (err) => {
+      console.log("myWorker Error:", err);
     };
-    return worker
+
+    //responsuble for handeling the workers response
+    worker.onmessage = (e) => {
+      if (!e.data.init) {
+        handleWorkerChunkResponse(id, e.data);
+      }
+    };
+    return worker;
   };
 
+  function handleWorkerChunkResponse(id, data) {
+    let { vertices, uvs, normals, faceIndexMap, count, chunkNumber, blocksOfChunk, forRefAll } = data;
+
+    vertices = new Float32Array(vertices);
+    uvs = new Float32Array(uvs);
+    normals = new Float32Array(normals);
+    cubeFaceIndexesREFlist.current[chunkNumber] = faceIndexMap;
+    if (!everDisplayedChunks.current[chunkNumber]) {
+      chunks.current[chunkNumber] = blocksOfChunk;
+      chunks.current[chunkNumber].visible = true;
+      REF_ALLCUBES.current = { ...REF_ALLCUBES.current, ...forRefAll };
+      everDisplayedChunks.current[chunkNumber] = true;
+    }
+
+    chunks.current[chunkNumber].draw = { cc: count, vertices, uvs, normals, rere: true };
+    // worker.terminate(); //use to kill the workers
+
+    if (workerPendingJob.current.length > 0) {
+      //look for more work
+      getpendingjob(id, workerPendingJob.current.shift());
+    } else {
+      workerWorking.current[id] = false;
+    }
+  }
+
   //if there is a new job give it to an open worker if not Q it up
- function addworkerjob(chunknumber){
-  let done = false //worker took new job
-  for(let i=0;i<workerlist.current.length;i++){
-    if(!workerworking.current[i] && !done){
-      let t=.5
-      let blocks = REF_ALLCUBES.current
-      let chunkblocks = chunks.current[chunknumber]
-      workerworking.current[i] = true
-      done =true
-      workerlist.current[i].postMessage({ t,blocks,chunkblocks,chunknumber });
-    }
-
-  }
-
-  if(!done){
-    //no worker took new job so Q it up
-    workerpendingjob.current.push(chunknumber)
-  }
-  
-
- }
-
- function getpendingjob(workernum,chunknumber){
-  let t=.5
-  let blocks = REF_ALLCUBES.current
-  let chunkblocks = chunks.current[chunknumber]
-  //give work to worker
-  workerlist.current[workernum].postMessage({ t,blocks,chunkblocks,chunknumber });
- }
-
-
-
-
-  //add bulk cubes for testing
-  useEffect(() => {
-    //this useeffect is for setup a bulk of cubes to test rendor
-    // only happens once
-    // can be ignored by settings oneTimeBlockLoaderBool to true at the top
-    const prng = alea("1000");
-    const noise2D = createNoise2D(prng);
-    if (!oneTimeBlockLoaderBool.current) {
-      let start = {};
-      // let xs = worldCubeSize**2;
-      let xs = 16
-      let ys = 1;
-      let zs = xs;
-      let heightfactor = 5
-      let depth = 2
-      let key = "";
-
-      let ty=0 //test y for noise
-
-      for (let x = 0; x < xs; x++){
-        for (let y = -1*Math.abs(depth); y < ys; y++) {
-          for (let z = 0; z < zs; z++) {
-            ty=Math.floor((noise2D(x / 100, z / 100) + 1) *heightfactor/2)+y
-            key = makeKey(x, ty, z);
-            if(x==0&&z==0){
-              console.log(key)
-            }
-            start[key] = {
-              pos: [x, ty, z],
-              texture: (Math.abs(x-z)<16)?"wood":"grass",
-            };
-          }
-        }
+  function addWorkerJob(chunkNumber) {
+    let done = false; //worker took new job
+    for (let i = 0; i < workerList.current.length; i++) {
+      if (!workerWorking.current[i] && !done) {
+        let t = 0.5;
+        let blocks = REF_ALLCUBES.current;
+        let chunkBlocks = chunks.current[chunkNumber];
+        workerWorking.current[i] = true;
+        done = true;
+        let ftBool = everDisplayedChunks.current[chunkNumber];
+        workerList.current[i].postMessage({ t, blocks, chunkBlocks, chunkNumber, ftBool });
       }
-      REF_ALLCUBES.current = start
-
-      oneTimeBlockLoaderBool.current = true;
     }
 
-    if(!workerlist.current[0]){
-      workerlist.current.forEach((ele,ind)=>{
-        workerlist.current[ind] = buildWorker(ind)
-      })
+    if (!done) {
+      //no worker took new job so Q it up
+      workerPendingJob.current.push(chunkNumber);
+    }
+  }
+
+  function getpendingjob(workernum, chunkNumber) {
+    let t = 0.5;
+    let blocks = REF_ALLCUBES.current;
+    let chunkBlocks = chunks.current[chunkNumber];
+    let ftBool = everDisplayedChunks.current[chunkNumber];
+    //give work to worker
+    workerList.current[workernum].postMessage({ t, blocks, chunkBlocks, chunkNumber, ftBool });
+  }
+
+  const playerChunkPosition = useRef(-1);
+  useFrame(() => {
+    let px = camera.position.x;
+    let pz = camera.position.z;
+    let ws = worldCubeSize;
+    let pChunk = ws * Math.floor(px / ws) + Math.floor(pz / ws);
+
+    if (playerChunkPosition.current != pChunk) {
+      // console.log("--------------");
+      // console.log('chunk-change',{px,pz,pChunk});
+      playerChunkPosition.current = pChunk;
+      updateDisplayedChunks(pChunk);
+    }
+  });
+
+  useEffect(() => {
+    if (!workerList.current[0]) {
+      workerList.current.forEach((ele, ind) => {
+        workerList.current[ind] = buildWorker(ind);
+        workerList.current[ind].postMessage({
+          init: {worldSettings},
+        });
+      });
     }
   }, []);
 
-  function getChunksStartingCubeCount() {
-    let wcs = worldCubeSize;
-    let wch = worldHeight;
-    let ab = REF_ALLCUBES.current; //all blocks
-    let abkeys = Object.keys(ab);
-    let newchunkarray = new Array(wcs ** 2).fill();
-    let newKeyForChunkObject = new Array(wcs ** 2).fill();
+  const activeChunks = useRef([]);
+  const everDisplayedChunks = useRef({});
 
-    //organize cubes into chunk
-    abkeys.forEach((cube) => {
-      let [x, y, z] = ab[cube].pos;
+  function updateDisplayedChunks(currentChunk) {
+    let chunksToDisplay = getListOfNearByChunksById(currentChunk);
 
-      //math for finding out which chunk this x and z coordinate belongs 2
-      let chunkid = Math.floor(x / wcs) * wcs + Math.floor(z / wcs);
-
-      if (!newchunkarray[chunkid]) {
-        newchunkarray[chunkid] = { count: 0 };
-      }
-      if (!newKeyForChunkObject[chunkid]) {
-        newKeyForChunkObject[chunkid] = { keys: new Array(wcs ** 2 * wch) };
-      }
-      newKeyForChunkObject[chunkid].keys[newchunkarray[chunkid].count] = cube;
-      newchunkarray[chunkid].count += 1;
+    let removeChunks = activeChunks.current.filter((id) => {
+      return !chunksToDisplay.includes(id);
     });
-
-    
-    for (let i = 0; i < newchunkarray.length; i++) {
-      if (!newchunkarray[i]) {
-        newchunkarray[i] = { count: 0 };
-      }
-      if (!newKeyForChunkObject[i]) {
-        newchunkarray[i]["keys"] = [];
+    let newlyDisplayChunks = chunksToDisplay.filter((id) => {
+      return !activeChunks.current.includes(id);
+    });
+    newlyDisplayChunks.forEach((id) => {
+      if (!everDisplayedChunks.current[id]) {
+        addWorkerJob(id);
       } else {
-        newchunkarray[i]["keys"] = newKeyForChunkObject[i].keys;
+        chunks.current[id].visible = true;
       }
-      newchunkarray[i]["draw"]={ cc:0, rere:false } //cc=cubecont
-    }
-    // adding the keys and count properties for each chunk
-    chunks.current = newchunkarray;
+    });
+    removeChunks.forEach((id) => {
+      chunks.current[id].visible = false;
+    });
+    activeChunks.current = chunksToDisplay;
+  }
 
+  function getListOfNearByChunksById(currentchunk) {
+    let ws = worldCubeSize;
+    let nearby = [];
+    let ccy = Math.floor(currentchunk / ws);
+    let ccx = currentchunk - ccy * ws;
+
+    for (let x = -viewRadius; x <= viewRadius; x++) {
+      for (let y = -viewRadius; y <= viewRadius; y++) {
+        let ans = currentchunk + ws * y + x;
+        //out of map edge
+        if (ans < 0 || ans > ws * ws) {
+          continue;
+        }
+
+        let ansy = Math.floor(ans / ws);
+        let ansx = ans - ansy * ws;
+
+        //out of view
+        let chunkDist = ((ansx - ccx) ** 2 + (ansy - ccy) ** 2) ** 0.5;
+        if (chunkDist > viewRadius) {
+          continue;
+        }
+
+        nearby.push(ans);
+      }
+    }
+    return nearby;
+  }
+
+  function showChunks() {
     return chunks.current.map((ele, ind) => {
       return (
         <Chunk
           key={`cubechunk${ind}`}
-          chunknum={ind}
-          myblocks={chunks.current[ind]}
-          chunkprops={chunks.current[ind]}
-          activeTextureREF={activeTextureREF}
-          cubeFaceIndexesREF = {cubeFaceIndexesREFlist}
+          chunkNum={ind}
+          chunkProps={chunks}
+          TextureREF={activeTextureREF}
+          cubeFaceIndexesREF={cubeFaceIndexesREFlist}
           REF_ALLCUBES={REF_ALLCUBES}
-          addworkerjob={addworkerjob}
+          addWorkerJob={addWorkerJob}
         />
       );
     });
-
-  
   }
 
-  return getChunksStartingCubeCount();
+  return showChunks();
 };

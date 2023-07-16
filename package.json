@@ -23,13 +23,16 @@
     "three": "^0.146.0",
     "three-stdlib": "^2.17.4",
     "web-vitals": "^2.1.4",
+    "web-worker": "^1.2.0",
     "zustand": "^3.0.3"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "buildWorkers": "webpack",
+    "bw": "npm run buildWorkers"
   },
   "eslintConfig": {
     "extends": [
@@ -48,5 +51,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "webpack": "^5.88.1",
+    "webpack-cli": "^5.1.4",
+    "worker-plugin": "^5.0.1"
   }
 }

@@ -14,7 +14,6 @@ import { OrbitControls } from "@react-three/drei";
 import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineConnection";
 
 function App() {
-  // console.log('----- the whole app???')
   const [establishedConn] = useStore((state) => [state.establishedConn]);
   const activeTextureREF = useRef("dirt");
   
@@ -33,15 +32,17 @@ function App() {
   function goToGame() {
     return (
       <>
-        <Canvas camera={{ position: [-5, 10, -5] }}>
+        <Canvas>
           {settings.hideSky ? <></> : <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
           <ambientLight intensity={0.5} />
           {settings.hidePlayer ? <></> : <FPV />}
+
           <Physics>
             {/* <Debug color="red" scale={1}  > */}
             <Scene activeTextureREF={activeTextureREF} />
             {/* </Debug> */}
           </Physics>
+
           {settings.useOrbitals ? <OrbitControls /> : <></>}
           <axesHelper name={"axesHelper"} scale={10} />
         </Canvas>
