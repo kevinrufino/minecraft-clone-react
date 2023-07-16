@@ -28,7 +28,10 @@ export const DrawCubesGeo = ({ info, clickCubeFace }) => {
             itemSize={3}
           />
         </bufferGeometry>
-        <meshStandardMaterial attach="material" map={cubeTextures} />
+        <meshStandardMaterial 
+          attach="material" 
+          map={cubeTextures}
+        />
       </mesh>
     );
   }

@@ -15,8 +15,8 @@ import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineCo
 
 function App() {
   const [establishedConn] = useStore((state) => [state.establishedConn]);
-
   const activeTextureREF = useRef("dirt");
+  
 
   function gettingWorldLoadScreen() {
     //this is meant to be a place holder for a potential loading screen as we generate enough of the world before the player.
@@ -32,22 +32,22 @@ function App() {
   function goToGame() {
     return (
       <>
-        <Canvas camera={{ position: [-5, 10, -5] }}>
+        <Canvas>
           {settings.hideSky ? <></> : <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
           <ambientLight intensity={0.5} />
           {settings.hidePlayer ? <></> : <FPV />}
+
           <Physics>
             {/* <Debug color="red" scale={1}  > */}
             <Scene activeTextureREF={activeTextureREF} />
             {/* </Debug> */}
           </Physics>
+
           {settings.useOrbitals ? <OrbitControls /> : <></>}
           <axesHelper name={"axesHelper"} scale={10} />
         </Canvas>
         {settings.ignoreCameraFollowPlayer ? <></> : <div className="cursor centered absolute">+</div>}
-        {settings.hideUIContent ? (
-          <></>
-        ) : (
+        {settings.hideUIContent ? (<></>) : (
           <>
             <Menu />
             <Help />

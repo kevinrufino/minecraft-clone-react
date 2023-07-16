@@ -8,6 +8,7 @@ import { useStore } from "../hooks/useStore";
 
 const JUMP_HIEGHT = 8;
 const SPEED = 4;
+const QUICKFACTOR = 10;
 
 export const Player = ({myradius = .5}) => {
     const { camera } = useThree();
@@ -16,12 +17,13 @@ export const Player = ({myradius = .5}) => {
         moveForward,
         moveLeft,
         moveRight,
-        jump
+        jump,
+        moveQuick
     } = useKeyboard();
     const [ref, api] = useSphere(() => ({
-        mass: 1,
+        mass: 0,
         type: 'Dynamic',
-        position: [0,5,0],
+        position: settings.startingPositionDefault,
         args:[myradius]
     }))
 
@@ -37,24 +39,51 @@ export const Player = ({myradius = .5}) => {
         direction
             .subVectors(frontVector, sideVector)
             .normalize()
-            .multiplyScalar(SPEED)
+            .multiplyScalar(SPEED*(moveQuick*QUICKFACTOR+1))
             .applyEuler(camera.rotation)
 
-        api.velocity.set(direction.x, vel.current[1], direction.z)
+
+        //stop player from moving into the negatives
+        api.velocity.set(...checkMapLimits(direction))
 
         // jump
         if (jump && Math.abs(vel.current[1]) < .05) {
-            api.velocity.set(vel.current[0], JUMP_HIEGHT, vel.current[2])
+            api.velocity.set(vel.current[0], vel.current[1] + JUMP_HIEGHT, vel.current[2])
         }
+
         // camera follows "player"
         if(!settings.ignoreCameraFollowPlayer){
-
             camera.position.copy(new Vector3(
                 pos.current[0],
                 pos.current[1],
                 pos.current[2]
                 ))
-            }
+        }
+    }
+
+    function checkMapLimits(direction){
+        let [x,y,z] = [direction.x,direction.y,direction.z]
+
+        if(pos.current[0]<=0.1){
+            x=1
+        }
+        if(pos.current[0]>=255.1){
+            x=-1
+        }
+        if(pos.current[1]<=0.1){
+            y=1
+        }
+        // if(pos.current[1]>=255.1){
+        //     y=-1
+        // }
+        if(pos.current[2]<=0.1){
+            z=1
+        }
+        if(pos.current[2]>=255.1){
+            z=-1
+        }
+
+        return [x,y,z]
     }
 
     function doOnlinePlayerPos(){
@@ -79,14 +108,6 @@ export const Player = ({myradius = .5}) => {
         doOnlinePlayerPos()
         doMovement()
     })
-
-    // function giveShape(){
-    //     if(ref.current){
-    //         return <>
-    //         </>
-    //     }
-
-    // }
 
     return (
 
