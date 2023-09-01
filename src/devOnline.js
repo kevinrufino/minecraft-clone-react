@@ -6,6 +6,7 @@ const settings= {
     useOrbitals:false,
 
     hidePlayer: false,
+    stopCursorCapture:false,
     hideOtherPlayers: true,
     ignoreCameraFollowPlayer: false,
 
@@ -21,7 +22,8 @@ const settings= {
 
     
     activeTexture: 'AllMinecraftTexture',
-    startingPositionDefault:[1,30,1]
+    startingPositionDefault:[1,30,1],
+    FullWorldChunkSideLength: 16
 }
 
 

@@ -5,12 +5,12 @@ let worldSet = {};
 
 onmessage = (e) => {
   if (e.data.init) {
-    // console.log('[FROM WORKER]','INIT:',e.data)
-    // console.log('[FROM WORKER]','INIT:')
+    // console.log('[FROM WORKER] - INIT')
     initializeWorker(e.data.init);
+  } else if (e.data.fillWorld) {
+    // console.log(`[FROM WORKER-${worldSet.w_ind}] - chunkgroup`,e.data.fillWorld)
+    initialFill(e.data.fillWorld);
   } else {
-    // console.log('[FROM WORKER]','regular flow:',e.data)
-    // console.log('[FROM WORKER]','regular flow',e.data.chunkNumber)
     regularFlow(e.data);
   }
 };
@@ -23,29 +23,22 @@ function initializeWorker(init) {
 }
 
 function regularFlow(data) {
-  let { t, blocks, chunkBlocks, chunkNumber, ftBool } = data;
-
-  let count = chunkBlocks.count;
-
-  if (!ftBool) {
-    let [info, infoList] = buildChunkForTheFirstTime(16, chunkNumber);
-
-    chunkBlocks.keys = infoList;
-    chunkBlocks.count = infoList.length;
-    blocks = { ...blocks, ...info };
-  }
+  let { t, blocks, chunkBlocks, chunkNumber } = data;
 
   let [vertices, uvs, normals, faceIndexMap] = genFaceArrays(t, blocks, chunkBlocks);
-  postMessage({
+  vertices = new Float32Array(vertices);
+  uvs = new Float32Array(uvs);
+  normals = new Float32Array(normals);
+  let singleChunkResponse = {
     vertices,
     uvs,
     normals,
     faceIndexMap,
-    count,
+    count: chunkBlocks["count"],
     chunkNumber,
     blocksOfChunk: chunkBlocks,
-    forRefAll: ftBool ? null : blocks,
-  });
+  };
+  postMessage(singleChunkResponse);
 }
 
 const AMTmap = {
@@ -92,9 +85,6 @@ function genFaceArrays(t, blocks, chunkBlocks) {
     // }
   };
   let facemapcount = 0;
-
-  // console.log('[FROM WORKER]chunkBlocks',chunkBlocks)
-  // console.log('[FROM WORKER]chunkBlocks',chunkBlocks)
   chunkBlocks.keys.forEach((cen) => {
     let [nx, ny, nz] = cen.split(".");
     let [x, y, z] = blocks[cen].pos;
@@ -203,119 +193,84 @@ function genFaceArrays(t, blocks, chunkBlocks) {
   return [vertices, uvs, normals, faceIndexMap];
 }
 
-function buildChunkForTheFirstTime(worldCubeSize, chunkNumber) {
-  let ws = worldCubeSize;
-  let cnX = Math.floor(chunkNumber / ws);
-  let cnZ = (chunkNumber / worldCubeSize - cnX) * ws;
+function initialFill(chunkNumbers) {
+  let fillRes = {};
+  chunkNumbers.forEach((chunkNumber) => {
+    let ws = 16;
+    let cnX = Math.floor(chunkNumber / ws);
+    let cnZ = (chunkNumber / ws - cnX) * ws;
+    const noise2D = worldSet["genNoise2D"];
+    let info = {};
+    let infoList = [];
+    let ys = 1;
+    let heightFactor = worldSet["heightFactor"];
+    let depth = worldSet["depth"];
+    let key = "";
 
-  // const prng = alea("1000");
-  const noise2D = worldSet["genNoise2D"];
-  let info = {};
-  let infoList = [];
-  // let xs = worldCubeSize**2;
-  let xs = ws; // world chunk size
-  let ys = 1;
-  let zs = xs;
-  let heightFactor = worldSet["heightFactor"];
-  let depth = 0;
-  let key = "";
+    let ty = 0; //test y for noise
 
-  let ty = 0; //test y for noise
+    let difflimit = AMTmapkeys.length;
 
-  let difflimit = AMTmapkeys.length;
+    for (let x = 16 * cnX; x < 16 * cnX + 16; x++) {
+      for (let y = -1 * Math.abs(depth); y < ys; y++) {
+        for (let z = 16 * cnZ; z < 16 * cnZ + 16; z++) {
+          ty = worldSet.showFlatWorld ? y : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) + y;
 
-  for (let x = 16 * cnX; x < 16 * cnX + 16; x++) {
-    for (let y = -1 * Math.abs(depth); y < ys; y++) {
-      for (let z = 16 * cnZ; z < 16 * cnZ + 16; z++) {
-        ty = worldSet.showFlatWorld ? y : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) + y;
-
-        key = makeKey(x, ty, z);
-        let texture = "";
-        if (worldSet["useHeightTextures"]) {
-          texture = AMTmapkeys[ty % difflimit];
-        } else {
-          texture = Math.abs(x - z) < 16 ? "wood" : "grass";
+          key = makeKey(x, ty, z);
+          let texture = "";
+          if (worldSet["useHeightTextures"]) {
+            texture = AMTmapkeys[ty % difflimit];
+          } else {
+            texture = Math.abs(x - z) < 16 ? "wood" : "grass";
+          }
+          infoList.push(key);
+          info[key] = {
+            pos: [x, ty, z],
+            texture,
+          };
         }
-        infoList.push(key);
-        info[key] = {
-          pos: [x, ty, z],
-          texture,
-        };
       }
     }
-  }
-  // console.log('myinfo',info)
-
-  // REF_ALLCUBES.current = { ...REF_ALLCUBES.current, ...info }; // i need to add the new blocks to all cubes ref
-  // chunks.current[chunkNumber].keys = infoList;
-  // chunks.current[chunkNumber].count = infoList.length;
-  return [info, infoList];
+    fillRes[chunkNumber] = { info, infoList };
+  });
+  let [ac, testor] = initialrendors(fillRes, chunkNumbers);
+  let worldFiller = { chunkNumbers, ac, testor };
+  // console.log(`[FROM WORKER:${worldSet.w_ind}]- before post`, worldFiller);
+  postMessage({ worldFiller });
 }
 
-function makeNoise() {
-  let perlin = {
-    rand_vect: function () {
-      let theta = this.myRand() * 2 * Math.PI;
-      return { x: Math.cos(theta), y: Math.sin(theta) };
-    },
-    dot_prod_grid: function (x, y, vx, vy) {
-      let g_vect;
-      let d_vect = { x: x - vx, y: y - vy };
-      if (this.gradients[[vx, vy]]) {
-        g_vect = this.gradients[[vx, vy]];
-      } else {
-        g_vect = this.rand_vect();
-        this.gradients[[vx, vy]] = g_vect;
-      }
-      return d_vect.x * g_vect.x + d_vect.y * g_vect.y;
-    },
-    smootherstep: function (x) {
-      return 6 * x ** 5 - 15 * x ** 4 + 10 * x ** 3;
-    },
-    interp: function (x, a, b) {
-      return a + this.smootherstep(x) * (b - a);
-    },
-    seed: function (v) {
-      this.gradients = {};
-      this.memory = {};
-      this.seedlastval = 0;
-      this.myRand = this.pseudoRandom(v);
-    },
-    get: function (x, y) {
-      if (this.memory.hasOwnProperty([x, y])) return this.memory[[x, y]];
-      let xf = Math.floor(x);
-      let yf = Math.floor(y);
-      //interpolate
-      let tl = this.dot_prod_grid(x, y, xf, yf);
-      let tr = this.dot_prod_grid(x, y, xf + 1, yf);
-      let bl = this.dot_prod_grid(x, y, xf, yf + 1);
-      let br = this.dot_prod_grid(x, y, xf + 1, yf + 1);
-      let xt = this.interp(x - xf, tl, tr);
-      let xb = this.interp(x - xf, bl, br);
-      let v = this.interp(y - yf, xt, xb);
-      this.memory[[x, y]] = v;
-      return v;
-    },
-    pseudoRandom: function (seed) {
-      let res = ("" + seed)
-        .substring(0, 20)
-        .split("")
-        .reduce((prev, s, idx) => {
-          prev += "" + s.charCodeAt(0) + idx;
-          return prev;
-        }, "");
-      let value = Number(res);
-      value = (value * 16807) % 2147483647;
-      this.seedlastval = value;
+function initialrendors(fillRes, chunkNumbers) {
+  let t = 0.5;
 
-      return () => {
-        let prevValue = this.seedlastval;
-        this.seedlastval = (this.seedlastval * 16807) % 2147483647;
-        return prevValue;
-      };
-    },
-  };
-  perlin.seed("seed");
+  let blocks = {};
+  chunkNumbers.forEach((cn) => {
+    blocks = { ...blocks, ...fillRes[cn].info };
+  });
 
-  return perlin;
+  chunkNumbers.forEach((cn, myind) => {
+    let chunkBlocks = {
+      keys: fillRes[cn].infoList,
+      count: fillRes[cn].infoList.length,
+    };
+
+    let [vertices, uvs, normals, faceIndexMap] = genFaceArrays(t, blocks, chunkBlocks, cn);
+
+    vertices = new Float32Array(vertices);
+    uvs = new Float32Array(uvs);
+    normals = new Float32Array(normals);
+
+    fillRes[cn] = {
+      keys: fillRes[cn].infoList,
+      count: fillRes[cn].infoList.length,
+      visible: false,
+      draw: {
+        rere: false,
+        vertices,
+        uvs,
+        normals,
+      },
+      faceIndexMap,
+    };
+  });
+  return [blocks, fillRes];
 }

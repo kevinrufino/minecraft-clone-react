@@ -12,10 +12,39 @@ import { useStore } from "./hooks/useStore";
 import settings from "./devOnline";
 import { OrbitControls } from "@react-three/drei";
 import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineConnection";
+import { LoadingWorldPage } from "./components/LoadingWorldPage";
 
 function App() {
+  console.log("-------- rerender App");
   const [establishedConn] = useStore((state) => [state.establishedConn]);
   const activeTextureREF = useRef("dirt");
+
+  const chunksmadecounter = useRef({loaddone:false , track:{} })
+  const loadingscreenhtml= useRef()
+  const [initStatus,setInitStatus] = useState({
+    buildWorkers:0,
+    initWorkers:0,
+    initWorld:0,
+  })
+
+  function updateInitStatus(obj){ 
+    setInitStatus({...initStatus.current,...obj})
+  }
+
+  function addonechunkmade(num){
+    let max = settings.FullWorldChunkSideLength**2
+    chunksmadecounter.current.track[num]=true
+    let madecount=Object.keys(chunksmadecounter.current.track).length
+
+    if(3<=madecount && !chunksmadecounter.current.loaddone){
+    chunksmadecounter.current.loaddone=true
+    }
+    
+    if(loadingscreenhtml.current){
+      loadingscreenhtml.current.textContent=`${madecount}/${max}`
+    }
+
+  }
   
 
   function gettingWorldLoadScreen() {
@@ -32,14 +61,15 @@ function App() {
   function goToGame() {
     return (
       <>
+        <LoadingWorldPage buildWorkers={initStatus.buildWorkers} chunksmadecounter={chunksmadecounter} />
         <Canvas>
           {settings.hideSky ? <></> : <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
           <ambientLight intensity={0.5} />
-          {settings.hidePlayer ? <></> : <FPV />}
+          {settings.stopCursorCapture ? <></> : <FPV />}
 
           <Physics>
             {/* <Debug color="red" scale={1}  > */}
-            <Scene activeTextureREF={activeTextureREF} />
+            <Scene activeTextureREF={activeTextureREF} updateInitStatus={updateInitStatus} initStatus={initStatus} addonechunkmade={addonechunkmade} chunksmadecounter={chunksmadecounter} />
             {/* </Debug> */}
           </Physics>
 

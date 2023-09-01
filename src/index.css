@@ -78,3 +78,8 @@ body {
   font-size: medium;
   color: white;
 }
+
+
+#loadingpage{
+  background-color: red;
+}
