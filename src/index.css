@@ -83,3 +83,20 @@ body {
 #loadingpage{
   background-color: red;
 }
+
+
+#LowerControlStrip{
+  background-color: green;
+  position:absolute;
+  z-index: 10;
+  width: 100vw;
+  height: min(2,50vh);
+  bottom: 0px;
+  display: flex;
+  justify-content: space-between;
+  /* align-self:flex-end; */
+}
+
+#joystick{
+  border: red 1px solid;
+}

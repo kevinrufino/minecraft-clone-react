@@ -11,7 +11,7 @@ import { useRef } from "react";
 
 extend({ RenderPixelatedPass });
 
-export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, initStatus,chunksmadecounter}) => {
+export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, initStatus,chunksmadecounter,moveBools}) => {
   console.log("----this is scene");
   const { size, scene, camera } = useThree();
   const resolution = useMemo(() => new THREE.Vector2(size.width, size.height), [size]);
@@ -32,7 +32,7 @@ export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, init
 
   return (
     <>
-      {settings.hidePlayer ? <></> : <Player />}
+      {settings.hidePlayer ? <></> : <Player moveBools={moveBools} />}
       {/* {settings.hideOtherPlayers ? <></> : <OtherPlayers />} */}
       {settings.hideCubes ? <></> : <Cubes activeTextureREF={activeTextureREF} REF_ALLCUBES={REF_ALLCUBES} updateInitStatus={updateInitStatus} addonechunkmade={addonechunkmade} initStatus={initStatus} chunksmadecounter={chunksmadecounter}/>}
       {/* <Effects>

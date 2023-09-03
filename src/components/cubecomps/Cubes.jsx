@@ -61,6 +61,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
           cubeFaceIndexesREFlist.current[cn] = e.data.worldFiller.testor[cn].faceIndexMap;
         });
         chunksmadecounter.current.loaddone = true;
+        console.log(chunks)
         setFillerLoadDone(true);
       } else if (e.data.init) {
         workerWorking.current[id] = false;
@@ -128,7 +129,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
     if (playerChunkPosition.current != pChunk && chunksmadecounter.current.loaddone) {
       // console.log("--------------");
-      // console.log("######################################################chunk-change", { px, pz, pChunk });
+      console.log("######################################################chunk-change", { px, pz, pChunk });
       playerChunkPosition.current = pChunk;
       updateDisplayedChunks(pChunk);
     }
@@ -158,6 +159,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
   function updateDisplayedChunks(currentChunk) {
     let chunksToDisplay = getListOfNearByChunksById(currentChunk);
+    // console.log(chunksToDisplay)
 
     let removeChunks = activeChunks.current.filter((id) => {
       return !chunksToDisplay.includes(id);
@@ -172,6 +174,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
     });
 
     newlyDisplayChunks.forEach((id) => {
+      // console.log('the id:',id)
     chunks.current[id].visible = true;
     });
     activeChunks.current = chunksToDisplay;
@@ -182,6 +185,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
     let nearby = [];
     let ccy = Math.floor(currentchunk / ws);
     let ccx = currentchunk - ccy * ws;
+    console.log('currentchunk',currentchunk)
 
     for (let x = -viewRadius; x <= viewRadius; x++) {
       for (let y = -viewRadius; y <= viewRadius; y++) {

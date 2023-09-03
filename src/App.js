@@ -13,6 +13,8 @@ import settings from "./devOnline";
 import { OrbitControls } from "@react-three/drei";
 import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineConnection";
 import { LoadingWorldPage } from "./components/LoadingWorldPage";
+import JoyStick from "./hooks/Joystick";
+import LowerControlStrip from "./hooks/LowerControlStrip";
 
 function App() {
   console.log("-------- rerender App");
@@ -26,6 +28,23 @@ function App() {
     initWorkers:0,
     initWorld:0,
   })
+
+  let moveBools=useRef({
+    moveBackward:false,
+    moveForward:false,
+    moveLeft:false,
+    moveRight:false,
+    jump:false,
+    moveQuick:false,
+    moveQuickTC:0, //tap count
+    moveQuickTT:0, //tap time
+    jumpTT:0,
+    jumpTC:0,
+    camUp:false,
+    camDown:false,
+    camLeft:false,
+    camRight:false,
+})
 
   function updateInitStatus(obj){ 
     setInitStatus({...initStatus.current,...obj})
@@ -69,11 +88,11 @@ function App() {
 
           <Physics>
             {/* <Debug color="red" scale={1}  > */}
-            <Scene activeTextureREF={activeTextureREF} updateInitStatus={updateInitStatus} initStatus={initStatus} addonechunkmade={addonechunkmade} chunksmadecounter={chunksmadecounter} />
+            <Scene activeTextureREF={activeTextureREF} updateInitStatus={updateInitStatus} initStatus={initStatus} addonechunkmade={addonechunkmade} chunksmadecounter={chunksmadecounter} moveBools={moveBools}/>
             {/* </Debug> */}
           </Physics>
 
-          {settings.useOrbitals ? <OrbitControls /> : <></>}
+          {settings.useOrbitals ? <OrbitControls   /> : <></>}
           <axesHelper name={"axesHelper"} scale={10} />
         </Canvas>
         {settings.ignoreCameraFollowPlayer ? <></> : <div className="cursor centered absolute">+</div>}
@@ -85,11 +104,22 @@ function App() {
         )}
 
         {settings.hideTextSelect ? <></> : <TextureSelector activeTextureREF={activeTextureREF} />}
+        <LowerControlStrip moveBools={moveBools} />
       </>
     );
   }
 
+  function showtestor(){
+
+
+    return <>
+    <LowerControlStrip moveBools={moveBools} />
+    </>
+
+  }
+
   return establishedConn ? goToGame() : gettingWorldLoadScreen();
+  // return showtestor();
 }
 
 export default App;
