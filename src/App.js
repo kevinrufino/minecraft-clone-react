@@ -44,6 +44,9 @@ function App() {
     camDown:false,
     camLeft:false,
     camRight:false,
+    camCenter:false,
+    camCenterTT:0,
+    camCenterTC:0
 })
 
   function updateInitStatus(obj){ 

@@ -11,7 +11,7 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
         msx:0,
         msy:0,
         isdragging:false,
-        sensitivity:4,
+        sensitivity:12,
         tapsensetime:.5,
         elepos:{}
     })
@@ -32,7 +32,7 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
             can.addEventListener("pointerdown",mousedown)
             can.addEventListener("pointerup",mouseup)
             can.addEventListener("pointermove",mousemove)
-            can.addEventListener("pointerout",mouseout)
+            can.addEventListener("pointerleave",mouseout)
             // info.current.currx = startx+
             // console.log({
             //     winy:window.innerHeight,
@@ -44,6 +44,7 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
         }
         moveBools.current.moveQuickTT = new Date().getTime()
         moveBools.current.jumpTT = new Date().getTime()
+        moveBools.current.camCenterTT = new Date().getTime()
 
     },[])
 
@@ -105,10 +106,13 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
                 moveBools.current.camLeft=false
                 moveBools.current.camUp=false
                 moveBools.current.camDown=false
+                moveBools.current.camCenter=false
+
     
             }else{
     
-                // moveBools.current.moveJump = moveBools.current.moveJumpTC>2
+                moveBools.current.camCenter = moveBools.current.camCenterTC>2
+                console.log({camCenter:moveBools.current.camCenterTC})
                 let data = info.current
                 let sense = radius/data.sensitivity
                 
@@ -152,12 +156,12 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
         }
         if(sightmovement){
             let now  = new Date().getTime()
-            let diff = now-moveBools.current.moveJumpTT
-            moveBools.current.moveJumpTT=new Date().getTime()
+            let diff = now-moveBools.current.camCenterTT
+            moveBools.current.camCenterTT=new Date().getTime()
             if(diff<info.current.tapsensetime*1000){
-                moveBools.current.moveJumpTC+=1
+                moveBools.current.camCenterTC+=1
             }else{
-                moveBools.current.moveJumpTC=1
+                moveBools.current.camCenterTC=1
             }
         }
 
@@ -165,26 +169,32 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
 
     }
     function mouseup(e){
+        console.log('---mouseup')
         e.preventDefault()
         resetStick()
     }
 
     function mousemove(e){
         // console.log("---mosemove")
+        let xside=info.current.elepos.x+givenWidth
+        let yside=info.current.elepos.y+givenHeight
+        // let testdist  = ((x-xside)**2+(y-yside)**2)**.5
         e.preventDefault()
         if(info.current.isdragging){
             // console.log(info.current)
             let dx = e.clientX - info.current.msx
+            console.log({ecx:e.clientX,msx:info.current.msx},dx)
             info.current.msx=e.clientX
             info.current.currx+=dx
-
+            
             let dy = e.clientY - info.current.msy
+            console.log({ecy:e.clientY,msy:info.current.msy},dy)
             info.current.msy=e.clientY
             info.current.curry+=dy
 
             if(Math.abs(
                 ((info.current.origx-info.current.currx)**2+(info.current.origy-info.current.curry)**2)**.5
-                )>radius/2){
+                )>radius/4){
 
                 info.current.curry-=dy
                 info.current.currx-=dx
@@ -194,6 +204,7 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
         }
     }
     function mouseout(e){
+        // console.log('---mouseout')
         e.preventDefault()
         resetStick()
     }
@@ -216,6 +227,10 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
         ctx.strokeStyle = "yellow";
         ctx.stroke();
         ctx.beginPath();
+        ctx.arc(info.current.origx, info.current.origy, radius/4, 0, 2 * Math.PI);
+        ctx.strokeStyle = "orange";
+        ctx.stroke();
+        ctx.beginPath();
         ctx.arc(info.current.currx, info.current.curry, radius/2, 0, 2 * Math.PI);
         ctx.strokeStyle = "black";
         ctx.stroke();
@@ -230,7 +245,7 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
 
 
     // console.log(window.innerWidth)
-    return(<canvas id={myId} ref={joycanva} width={startx*2} height={starty*2}  ></canvas>)
+    return(<canvas id={myId} ref={joycanva} width={startx*2} height={starty*2} className="joystick"  ></canvas>)
 }
 
 

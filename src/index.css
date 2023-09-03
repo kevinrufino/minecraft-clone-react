@@ -97,6 +97,6 @@ body {
   /* align-self:flex-end; */
 }
 
-#joystick{
+.joystick{
   border: red 1px solid;
 }

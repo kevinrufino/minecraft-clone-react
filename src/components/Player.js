@@ -99,7 +99,7 @@ export const Player = ({myradius = .5,moveBools}) => {
             let vert = moveBools.current.camDown?1:moveBools.current.camUp*-1
             let horz = moveBools.current.camLeft?1:moveBools.current.camRight*-1
             
-            if(moveQuick){
+            if(moveBools.current.camCenterTC>2){
                 camera.rotation.x=  180*Math.PI/180
                 camera.rotation.y= 0 *Math.PI/180
                 camera.rotation.z= 180 *Math.PI/180
