@@ -3,7 +3,7 @@ import { Chunk } from "./Chunk";
 import { useFrame, useThree } from "@react-three/fiber";
 
 export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus,chunksmadecounter}) => {
-  console.log("-------- rerender Cubes");
+  // console.log("-------- rerender Cubes");
   const { camera } = useThree();
   const [FillerLoadDoneValue, setFillerLoadDone] = useState(false);
   let worldChunkSize = 16; //this squareD is the number of chunks in map
@@ -61,7 +61,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
           cubeFaceIndexesREFlist.current[cn] = e.data.worldFiller.testor[cn].faceIndexMap;
         });
         chunksmadecounter.current.loaddone = true;
-        console.log(chunks)
+        // console.log(chunks)
         setFillerLoadDone(true);
       } else if (e.data.init) {
         workerWorking.current[id] = false;
@@ -75,7 +75,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
   function handleWorkerChunkResponse(id, data) {
     let { vertices, uvs, normals, faceIndexMap, count, chunkNumber } = data;
-    console.log(`rec: ${chunkNumber}`);
+    // console.log(`rec: ${chunkNumber}`);
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
     normals = new Float32Array(normals);
@@ -83,7 +83,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
     chunks.current[chunkNumber].draw = { cc: count, vertices, uvs, normals, rere: true };
     // worker.terminate(); //use to kill the workers
-    console.log(workerPendingJob.current);
+    // console.log(workerPendingJob.current);
     if (workerPendingJob.current.length > 0) {
       //look for more work
       getPendingJob(id, workerPendingJob.current.shift());
@@ -129,7 +129,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
     if (playerChunkPosition.current != pChunk && chunksmadecounter.current.loaddone) {
       // console.log("--------------");
-      console.log("######################################################chunk-change", { px, pz, pChunk });
+      // console.log("######################################################chunk-change", { px, pz, pChunk });
       playerChunkPosition.current = pChunk;
       updateDisplayedChunks(pChunk);
     }
@@ -185,7 +185,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
     let nearby = [];
     let ccy = Math.floor(currentchunk / ws);
     let ccx = currentchunk - ccy * ws;
-    console.log('currentchunk',currentchunk)
+    // console.log('currentchunk',currentchunk)
 
     for (let x = -viewRadius; x <= viewRadius; x++) {
       for (let y = -viewRadius; y <= viewRadius; y++) {

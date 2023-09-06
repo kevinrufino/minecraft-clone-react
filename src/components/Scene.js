@@ -12,7 +12,7 @@ import { useRef } from "react";
 extend({ RenderPixelatedPass });
 
 export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, initStatus,chunksmadecounter,moveBools}) => {
-  console.log("----this is scene");
+  // console.log("----this is scene");
   const { size, scene, camera } = useThree();
   const resolution = useMemo(() => new THREE.Vector2(size.width, size.height), [size]);
   const REF_ALLCUBES = useRef({ "0.0.0": { pos: [0, 0, 0], texture: "log" } });
@@ -22,13 +22,13 @@ export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, init
   /*
     adjusting camera: to help see a larger amount of cubes from different views
   */
-  useFrame((state) => {
-    if (lookatatinit.current) {
-      lookatatinit.current = false;
-      state.camera.lookAt(20, -5, 20);
+  // useFrame((state) => {
+  //   if (lookatatinit.current) {
+  //     lookatatinit.current = false;
+  //     state.camera.lookAt(20, -5, 20);
 
-    }
-  });
+  //   }
+  // });
 
   return (
     <>

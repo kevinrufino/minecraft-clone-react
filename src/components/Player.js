@@ -33,11 +33,8 @@ export const Player = ({myradius = .5,moveBools}) => {
 
         args:[myradius]
     }))
-console.log(settings.startingRotationDefault)
-console.log([
-    0 *Math.PI/180,
-    180 *Math.PI/180,
-    0])
+// console.log(settings.startingRotationDefault)
+// console.log([0 *Math.PI/180,180 *Math.PI/180,0])
     const vel = useRef([0,0,0])
     const pos = useRef([0,0,0])
     const rot = useRef([0,180 *Math.PI/180,0,'XYZ'])
@@ -239,8 +236,8 @@ console.log([
             if(moveBools.current.camCenterTC>2){
                 moveBools.current.camCenterTC=0
                 rot.current=[...settings.startingRotationDefault,'YXZ']
-                console.log(rot.current)
-                console.log([...settings.startingRotationDefault,'YXZ'])
+                // console.log(rot.current)
+                // console.log([...settings.startingRotationDefault,'YXZ'])
             }
             if(hor || ver || true){
                 rot.current = [
@@ -313,7 +310,7 @@ console.log([
         api.velocity.subscribe((v) => vel.current = v)
     }, [api.velocity])
     useEffect(() => {
-        console.log(`---position useeffect`)
+        // console.log(`---position useeffect`)
         api.position.subscribe((p) =>{
             // console.log(p)
             pos.current = p

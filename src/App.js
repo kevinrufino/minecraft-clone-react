@@ -17,7 +17,7 @@ import JoyStick from "./hooks/Joystick";
 import LowerControlStrip from "./hooks/LowerControlStrip";
 
 function App() {
-  console.log("-------- rerender App");
+  // console.log("-------- rerender App");
   const [establishedConn] = useStore((state) => [state.establishedConn]);
   const activeTextureREF = useRef("dirt");
 
