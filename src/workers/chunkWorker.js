@@ -73,26 +73,29 @@ function genFaceArrays(t, blocks, chunkBlocks) {
   let vertices = [];
   let uvs = [];
   let normals = [];
-
+  
   let uvSize = 1 / 2 / 2 / 2 / 2;
   let faceIndexMap = {
     // 0:{
-    //   remove:'1.0.1',
-    //   add:{
-    //     key: '1.2.1',
-    //     pos: [x, y, z]
-    //   },
-    // }
-  };
-  let facemapcount = 0;
+      //   remove:'1.0.1',
+      //   add:{
+        //     key: '1.2.1',
+        //     pos: [x, y, z]
+        //   },
+        // }
+      };
+      let facemapcount = 0;
   chunkBlocks.keys.forEach((cen) => {
+    // console.log(`5+++${cen}`)
     let [nx, ny, nz] = cen.split(".");
     let [x, y, z] = blocks[cen].pos;
     let showfaces = [false, false, false, false, false, false];
+    // console.log(`3+++${cen}`)
     let currtexture = blocks[cen].texture;
+    // console.log({a1:currtexture,a2:AMTmap,a3:AMTmap[currtexture],a4:blocks[cen]})
     let uvL = (AMTmap[currtexture][0] - 1) * uvSize;
     let uvB = (AMTmap[currtexture][1] - 1) * uvSize;
-
+    // console.log(`4+++${cen}`)
     let onefaceuv = [
       //uv means UxV meaning (u,v) meaning u is the x cordinate v is the y
       uvL + uvSize,
@@ -219,7 +222,10 @@ function initialFill(chunkNumbers) {
           key = makeKey(x, ty, z);
           let texture = "";
           if (worldSet["useHeightTextures"]) {
-            texture = AMTmapkeys[ty % difflimit];
+            texture = AMTmapkeys[Math.abs(ty) % difflimit];
+            if(key=="0.-1.0"){
+              console.log({x,y,z,ty,difflimit,math:ty % difflimit,texture,AMTmapkeys})
+            }
           } else {
             texture = Math.abs(x - z) < 16 ? "wood" : "grass";
           }
@@ -248,13 +254,14 @@ function initialrendors(fillRes, chunkNumbers) {
   });
 
   chunkNumbers.forEach((cn, myind) => {
+    // console.log(`0---${myind}`)
     let chunkBlocks = {
       keys: fillRes[cn].infoList,
       count: fillRes[cn].infoList.length,
     };
 
     let [vertices, uvs, normals, faceIndexMap] = genFaceArrays(t, blocks, chunkBlocks, cn);
-
+    // console.log(`1---${myind}`)
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
     normals = new Float32Array(normals);

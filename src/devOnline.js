@@ -3,7 +3,7 @@
 const settings= {
     online: false,
     herokuserver: false,
-    useOrbitals:false,
+    useOrbitals:true,
 
     hidePlayer: false,
     stopCursorCapture:true,
@@ -23,6 +23,7 @@ const settings= {
     
     activeTexture: 'AllMinecraftTexture',
     startingPositionDefault:[30,30,30],
+    startingRotationDefault:[-50 *Math.PI/180,225 *Math.PI/180,0],
     FullWorldChunkSideLength: 16
 }
 

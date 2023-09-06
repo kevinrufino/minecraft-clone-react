@@ -11,7 +11,7 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
   let seed = "robo";
 
   let worldSettings = {
-    useHeightTextures: false,
+    useHeightTextures: true,
     showFlatWorld: false,
     seed,
     heightFactor: 20,
