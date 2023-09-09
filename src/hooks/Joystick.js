@@ -18,21 +18,26 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
 
     useEffect(()=>{
         if(joycanva.current){
-            // console.log('-------------')
+            console.log('-------------')
 
             let eleData=joycanva.current.getBoundingClientRect()
-            // console.log({myId,eleData})
+            console.log({myId,eleData})
             info.current.elepos=joycanva.current.getBoundingClientRect()
             // info.current.origx=eleData.x+startx
             // info.current.origy=eleData.y+starty
             // info.current.currx=info.current.origx
             // info.current.curry=info.current.origy
-            // console.log('-------------')
+            console.log('-------------')
             let can = joycanva.current
-            can.addEventListener("pointerdown",mousedown)
-            can.addEventListener("pointerup",mouseup)
+            // can.addEventListener("pointerdown",mousedown)
+            // can.addEventListener("pointerup",mouseup)
             // can.addEventListener("pointermove",mousemove)
-            // can.addEventListener("pointerleave",mouseout)
+
+            can.addEventListener("touchstart",mousedown)
+            can.addEventListener("touchend",mouseup)
+            can.addEventListener("touchmove",mousemove)
+
+            // can.addEventListener("touchleave",mouseout)
             // info.current.currx = startx+
             // console.log({
             //     winy:window.innerHeight,
@@ -52,14 +57,6 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
         let xside=info.current.elepos.x+givenWidth
         let yside=info.current.elepos.y+givenHeight
         let dist  = ((x-xside)**2+(y-yside)**2)**.5
-        // console.log({myId,dist,info,xside,yside})
-        // console.log({x,xside},(x-   info.current.elepos.x+givenWidth    ))
-        // console.log({y,yside},(y-(  info.current.elepos.y+givenHeight  )))
-        // console.log({dist})
-        // console.log({myId,xside,yside})
-        // let dist  = ((x-info.current.currx)**2+(y-(window.innerHeight-info.current.curry))**2)**.5
-        // console.log({dist})
-
         return dist<r
     }
     function resetStick(){
@@ -93,10 +90,6 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
                 moveBools.current.moveForward=(data.curry-data.origy)<-1*sense
                 
                 moveBools.current.moveBackward=(data.curry-data.origy)>sense
-                
-                // console.log({...moveBools.current})
-                // console.log({...data})
-                // console.log({sense,x:data.currx-data.origx,y:data.curry-data.origy})
             }
 
         }
@@ -133,22 +126,22 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
     }
 
     function mousedown(e){
-        // console.log("---mouseDown")
-        // console.log(e)
+        console.log("---mouseDown")
         e.preventDefault()
+        console.log([...e.changedTouches][0].clientX)
+        let st={} //screen touch
+        st.x=[...e.changedTouches][0].clientX
+        st.y=[...e.changedTouches][0].clientY
+        // e = e.changedTouches
         // if clicking within stick circle
-        if(inshape(e.clientX,e.clientY,radius)){
+        if(inshape(st.x,st.y,radius)){
             info.current.isdragging=true
-            // info.current.msx=e.clientX
-            // info.current.msy=e.clientY
-            // info.current.currx=e.clientX
-            // info.current.currx=e.clientY
-            movestick(e.clientX,e.clientY)
-            // console.log(info.current)
+            info.current.msx=st.x
+            info.current.msy=st.y
         }
 
-        //rapid taps trackers
         if(physicalmovement){
+            //rapid taps trackers
             let now  = new Date().getTime()
             let diff = now-moveBools.current.moveQuickTT
             moveBools.current.moveQuickTT=new Date().getTime()
@@ -158,7 +151,6 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
                 moveBools.current.moveQuickTC=1
             }
         }
-        //rapid taps trackers
         if(sightmovement){
             let now  = new Date().getTime()
             let diff = now-moveBools.current.camCenterTT
@@ -170,53 +162,55 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
             }
         }
 
-        filldraw()
+
 
     }
     function mouseup(e){
-        // console.log('---mouseup')
+        console.log('---mouseup')
         e.preventDefault()
         resetStick()
     }
 
-    function movestick(cx,cy){
-        let xside=info.current.elepos.x+givenWidth
-        let yside=info.current.elepos.y+givenHeight
-        // if(info.current.isdragging){
-            // console.log(info.current)
-            let dx = cx - xside
-            // console.log({ecx:cx,msx:info.current.elepos.x},dx)
-            // info.current.msx=cx
-            info.current.currx+=dx
-            
-            let dy = cy - yside
-            // console.log({ecy:cy,msy:info.current.elepos.y},dy)
-            // info.current.msy=cy
-            info.current.curry+=dy
-            // console.log({dx,dy})
-
-            // if(Math.abs(
-            //     ((info.current.origx-info.current.currx)**2+(info.current.origy-info.current.curry)**2)**.5
-            //     )>radius){
-
-            //     info.current.curry-=dy
-            //     info.current.currx-=dx
-            // }
-            filldraw()
-            adjustOutValues()
-        // }
-    }
-
     function mousemove(e){
-        // console.log("---mosemove")
+        console.log("---mosemove")
+        console.log(e)
+        e.preventDefault()
         let xside=info.current.elepos.x+givenWidth
         let yside=info.current.elepos.y+givenHeight
         // let testdist  = ((x-xside)**2+(y-yside)**2)**.5
-        e.preventDefault()
-        movestick(e.clientX,e.clientY)
+
+        let st={} //screen touch
+        st.x=[...e.changedTouches][0].clientX
+        st.y=[...e.changedTouches][0].clientY
+
+
+
+
+        if(info.current.isdragging){
+            // console.log(info.current)
+            let dx = st.x - info.current.msx
+            // console.log({ecx:e.clientX,msx:info.current.msx},dx)
+            info.current.msx=st.x
+            info.current.currx+=dx
+            
+            let dy = st.y - info.current.msy
+            // console.log({ecy:e.clientY,msy:info.current.msy},dy)
+            info.current.msy=st.y
+            info.current.curry+=dy
+
+            if(Math.abs(
+                ((info.current.origx-info.current.currx)**2+(info.current.origy-info.current.curry)**2)**.5
+                )>radius/4){
+
+                info.current.curry-=dy
+                info.current.currx-=dx
+            }
+            filldraw()
+            adjustOutValues()
+        }
     }
     function mouseout(e){
-        // console.log('---mouseout')
+        console.log('---mouseout')
         e.preventDefault()
         resetStick()
     }
@@ -247,7 +241,6 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
         ctx.strokeStyle = "black";
         ctx.stroke();
         ctx.beginPath();
-
         ctx.arc(info.current.currx, info.current.curry, radius/80, 0, 2 * Math.PI);
         ctx.strokeStyle = "black";
         ctx.fillStyle='green'
