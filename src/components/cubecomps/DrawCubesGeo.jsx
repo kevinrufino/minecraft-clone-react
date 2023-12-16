@@ -12,7 +12,7 @@ export const DrawCubesGeo = ({ info, clickCubeFace }) => {
 
   function drawGeo() {
     return (
-      <mesh ref={theMeshRef} onClick={clickCubeFace} onContextMenu={clickCubeFace} name="cubesMesh2">
+      <mesh ref={theMeshRef} onContextMenu={clickCubeFace} onPointerDown={clickCubeFace} name="cubesMesh2">
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"

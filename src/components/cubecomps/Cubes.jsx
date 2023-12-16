@@ -1,33 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { Chunk } from "./Chunk";
 import { useFrame, useThree } from "@react-three/fiber";
+import settings from "../../devOnline";
 
-export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus,chunksmadecounter}) => {
+export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initStatus, chunksmadecounter }) => {
   // console.log("-------- rerender Cubes");
   const { camera } = useThree();
   const [FillerLoadDoneValue, setFillerLoadDone] = useState(false);
-  let worldChunkSize = 16; //this squareD is the number of chunks in map
-  let viewRadius = 10; //this number is distance from current place chunks are allowed to exist
-  let seed = "robo";
-
-  let worldSettings = {
-    useHeightTextures: true,
-    showFlatWorld: false,
-    seed,
-    heightFactor: 20,
-    depth: 1,
-  };
+  // let chunkCounter = useRef(0)
+  let viewRadius = settings.viewRadius; //this number is distance from current place chunks are allowed to be shown
+  let outerViewRadius = settings.outerViewRadius; //this number is the distance from current place we insure are built/ready to be shown
+  let fillBatchSize = settings.fillBatchSize; // chunks allowed per worker job
+  let worldSettings = settings.worldSettings;
+  let renderDistPrecentage = settings.renderDistPrecentage;
 
   // i believe for most machines 4 is the limit but i am using 3 to be safe
-  let workerCount = 1; //a set number of workers
+  let workerCount = settings.workerCount; //a set number of workers
   const workerPendingJob = useRef([]);
   const workerWorking = useRef(new Array(workerCount).fill(true));
   const workerList = useRef(new Array(workerCount).fill(""));
 
+  const lastRenderChunk = useRef(settings.startingChunk)
+
   //used to keep track of what to add or remove when a face is clicked
-  const cubeFaceIndexesREFlist = useRef(new Array(worldChunkSize ** 2).fill({}));
+  const cubeFaceIndexesREFlist = useRef(new Array(worldSettings.worldSize ** 2).fill({}));
   const chunks = useRef(
-    new Array(worldChunkSize ** 2).fill().map(() => {
+    new Array(worldSettings.worldSize ** 2).fill().map(() => {
       return new Object({ count: 0, draw: { cc: 0, rere: false } });
     })
   );
@@ -52,28 +50,40 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
     //responsuble for handeling the workers response
     worker.onmessage = (e) => {
-      if (e.data.singleChunkResponse) {
-        handleWorkerChunkResponse(id, e.data.singleChunkResponse);
+      // console.log(`heard back from worker`,Object.keys(e.data))
+      if (e.data.regFlow) {
+        handleWorkerUserChangeResponse(id, e.data.regFlow);
       } else if (e.data.worldFiller) {
-        REF_ALLCUBES.current = { ...REF_ALLCUBES.current, ...e.data.worldFiller.ac };
-        e.data.worldFiller.chunkNumbers.forEach((cn) => {
-          chunks.current[cn] = e.data.worldFiller.testor[cn];
-          cubeFaceIndexesREFlist.current[cn] = e.data.worldFiller.testor[cn].faceIndexMap;
-        });
-        chunksmadecounter.current.loaddone = true;
-        // console.log(chunks)
-        setFillerLoadDone(true);
-      } else if (e.data.init) {
-        workerWorking.current[id] = false;
-        if (workerPendingJob.current.length > 0) {
-          getPendingJob(id, workerPendingJob.current.shift());
+        // chunkCounter.current++
+        // console.log(e.data.worldFiller.chunkNumbers.length)
+        chunksmadecounter.current.track.count+=e.data.worldFiller.chunkNumbers.length
+        if(chunksmadecounter.current.ref){
+          chunksmadecounter.current.ref.updateDisplay()
         }
+        handleWorkerWorldFillResponse(e.data.worldFiller);
+      }
+      if (workerPendingJob.current.length > 0) {
+        getPendingJob(id);
+      } else {
+        workerWorking.current[id] = false;
       }
     };
     return worker;
   };
 
-  function handleWorkerChunkResponse(id, data) {
+  function calcChunkXandYFromId(id){
+    let ws = settings.worldSettings.worldSize
+    let y = Math.floor(id / ws);
+    let x = id - y * ws;
+    return {x,y}
+  }
+  function calcDistBetweenChunksFromIds(l,r){
+    let a = calcChunkXandYFromId(l)
+    let b = calcChunkXandYFromId(r)
+    return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
+  }
+
+  function handleWorkerUserChangeResponse(data) {
     let { vertices, uvs, normals, faceIndexMap, count, chunkNumber } = data;
     // console.log(`rec: ${chunkNumber}`);
     vertices = new Float32Array(vertices);
@@ -83,56 +93,114 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
     chunks.current[chunkNumber].draw = { cc: count, vertices, uvs, normals, rere: true };
     // worker.terminate(); //use to kill the workers
-    // console.log(workerPendingJob.current);
-    if (workerPendingJob.current.length > 0) {
-      //look for more work
-      getPendingJob(id, workerPendingJob.current.shift());
-    } else {
-      workerWorking.current[id] = false;
+  }
+  function handleWorkerWorldFillResponse(worldFiller) {
+    REF_ALLCUBES.current = { ...REF_ALLCUBES.current, ...worldFiller.ac };
+    // console.log(`Response`,worldFiller)
+    worldFiller.chunkNumbers.forEach((cn) => {
+      chunks.current[cn] = worldFiller.testor[cn];
+      cubeFaceIndexesREFlist.current[cn] = worldFiller.testor[cn].faceIndexMap;
+    });
+    // console.log(chunks)
+    if (workerPendingJob.current.length == 0) {
+      chunksmadecounter.current.loaddone = true;
+      chunksmadecounter.current.ref.updateDisplay()
+      setFillerLoadDone(true);
     }
   }
 
+  function giveWorkerUserChangeJob(workerId, chunkinfo) {
+    let chunkNumber = chunkinfo.chunkNumber;
+    let t = 0.5;
+    // console.log(getListOfNearByChunksById(chunkNumber,1))
+    // console.log('ref all cubes:',REF_ALLCUBES.current)
+    // console.log('chunks',chunks.current)
+    let adjacentchunks = getListOfNearByChunksById(chunkNumber, 1);
+    let neededblocks = {};
+    adjacentchunks.forEach((cn) => {
+      chunks.current[cn].keys.forEach((bn) => {
+        neededblocks[bn] = REF_ALLCUBES.current[bn];
+      });
+    });
+    let blocks = neededblocks;
+    let chunkBlocks = chunks.current[chunkNumber];
+    workerList.current[workerId].postMessage({ t, blocks, chunkBlocks, chunkNumber });
+  }
+  function giveWorkerWorldFillJob(workerId, chunkinfo) {
+    workerList.current[workerId].postMessage({ worldFill: chunkinfo.arr });
+  }
+
   //if there is a new job give it to an open worker if not Q it up
-  function addWorkerJob(chunkNumber) {
+  function addWorkerJob(chunkinfo, type) {
+  // if(chunksmadecounter.current.loaddone){
+    // console.log("new worker job:",{type,chunkinfo})
+  // }
     let taken = false; //worker took new job
     for (let i = 0; i < workerList.current.length; i++) {
       if (!workerWorking.current[i] && !taken) {
-        let t = 0.5;
-        let blocks = REF_ALLCUBES.current;
-        let chunkBlocks = chunks.current[chunkNumber];
         workerWorking.current[i] = true;
         taken = true;
-        workerList.current[i].postMessage({ t, blocks, chunkBlocks, chunkNumber });
+        if (type == "worldFill") {
+          giveWorkerWorldFillJob(i, chunkinfo);
+        } else if (type == "user") {
+          giveWorkerUserChangeJob(i, chunkinfo);
+        }
       }
     }
 
     if (!taken) {
       //no worker took new job so Q it up
-      workerPendingJob.current.push(chunkNumber);
+      workerPendingJob.current.push({ chunkinfo, type, pl: jobTypePriority(type) });
+      workerPendingJob.current.sort((ja, jb) => {
+        return ja.pl - jb.pl;
+      });
     }
   }
 
-  function getPendingJob(workernum, chunkNumber) {
-    let t = 0.5;
-    let blocks = REF_ALLCUBES.current;
-    let chunkBlocks = chunks.current[chunkNumber];
-    //give work to worker
-    workerList.current[workernum].postMessage({ t, blocks, chunkBlocks, chunkNumber });
+  function jobTypePriority(type) {
+    switch (type) {
+      case "user":
+        return 0;
+      case "worldFill":
+        return 1;
+      case "dyna":
+        return 3;
+      default:
+        return 0;
+    }
   }
 
-  
+  function getPendingJob(workernum) {
+    // console.log('pending',new Array(workerPendingJob.current))
+
+    let job = workerPendingJob.current.shift();
+    if (job.type == "worldFill") {
+      giveWorkerWorldFillJob(workernum, job.chunkinfo);
+    } else if (job.type == "user") {
+      giveWorkerUserChangeJob(workernum, job.chunkinfo);
+    }
+  }
+
   useFrame(() => {
     let px = camera.position.x;
     let pz = camera.position.z;
-    let ws = worldChunkSize;
-    let pChunk = ws * Math.floor(px / ws) + Math.floor(pz / ws);
+    let wS = worldSettings.worldSize;
+    let cS = worldSettings.chunkSize;
+    let pChunk = wS * Math.floor(px / cS) + Math.floor(pz / cS);
 
-    if (playerChunkPosition.current != pChunk && chunksmadecounter.current.loaddone) {
+    if (playerChunkPosition.current != pChunk && chunksmadecounter.current.loaddone && FillerLoadDoneValue) {
       // console.log("--------------");
       // console.log("######################################################chunk-change", { px, pz, pChunk });
       playerChunkPosition.current = pChunk;
+      console.log({pChunk})
+      if(calcDistBetweenChunksFromIds(lastRenderChunk.current,pChunk)>=(renderDistPrecentage*(outerViewRadius-viewRadius))){
+        checkWorldFilledRadius(pChunk);
+      }
       updateDisplayedChunks(pChunk);
     }
+    // if( chunksmadecounter.ref){
+    //   console.log(chunksmadecounter.ref.children[0].textContent)
+    // }
   });
 
   useEffect(() => {
@@ -147,18 +215,49 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
       });
       updateInitStatus({ ...initStatus, buildWorkers: workersmade });
     }
-    // triggering world fill once 
+    // triggering world fill once
     if (workerList.current[0] && !chunksmadecounter.current.loaddone) {
-      workerList.current[0].postMessage({
-        fillWorld: new Array(worldChunkSize**2).fill(0).map((_, ind) => {
-          return ind;
-        }),
+      // let worldFillarr=new Array(worldSettings.worldSize ** 2).fill(0).map((_, ind) => {return ind;})
+      // let worldFillarr=new Array(worldSettings.worldSize ** 2).fill(0).map((_, ind) => {return ind;})
+      let ourcurrentchunk = settings.startingChunk
+      // console.log({ourcurrentchunk})
+      let worldFillarr = getListOfNearByChunksById(ourcurrentchunk, outerViewRadius);
+      // console.log({worldFillarr})
+      let ws = worldSettings.worldSize;
+      let worldFillarrsort = worldFillarr.map((val) => {
+        let ay = Math.floor(val / ws);
+        let ax = val - ay * ws;
+        let by = Math.floor(ourcurrentchunk / ws);
+        let bx = ourcurrentchunk - by * ws;
+        let chunkDist = ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5;
+        return { val, dist: chunkDist };
       });
+      worldFillarrsort.sort((a, b) => {
+        return a.dist - b.dist;
+      });
+      worldFillarr = worldFillarrsort.map((a) => {
+        return a.val;
+      });
+      // console.log(worldFillarr)
+      let batchnum = Math.floor(worldFillarr.length / fillBatchSize);
+      if (worldFillarr.length % fillBatchSize > 0) {
+        batchnum++;
+      }
+
+      for (let i = 0; i < batchnum; i++) {
+        let chunkinfo = {
+          // arr:worldFillarr.slice(batchnum*i,batchnum*(i+1))
+          arr: worldFillarr.slice(fillBatchSize * i, fillBatchSize * (i + 1)),
+        };
+        addWorkerJob(chunkinfo, "worldFill");
+      }
     }
   }, []);
 
   function updateDisplayedChunks(currentChunk) {
-    let chunksToDisplay = getListOfNearByChunksById(currentChunk);
+    let chunksToDisplay = getListOfNearByChunksById(currentChunk, viewRadius);
+    // chunksToDisplay=[0,1,3,19]
+    // console.log({chunksToDisplay})
     // console.log(chunksToDisplay)
 
     let removeChunks = activeChunks.current.filter((id) => {
@@ -175,23 +274,48 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
     newlyDisplayChunks.forEach((id) => {
       // console.log('the id:',id)
-    chunks.current[id].visible = true;
+      // console.log(chunks.current[id])
+
+      chunks.current[id].visible = true;
     });
     activeChunks.current = chunksToDisplay;
   }
+  function checkWorldFilledRadius(currentChunk) {
+    lastRenderChunk.current = playerChunkPosition.current
+    let chunksTofill = getListOfNearByChunksById(currentChunk, outerViewRadius);
+    // console.log({chunksTofill})
+    chunksTofill = chunksTofill.filter((cn) => {
+      return !chunks.current[cn].count;
+    });
+    // console.log("have not been filled", chunksTofill);
+    if (chunksTofill.length) {
+      let batchnum = Math.floor(chunksTofill.length / fillBatchSize);
+      if (chunksTofill.length % fillBatchSize > 0) {
+        batchnum++;
+      }
+      for (let i = 0; i < batchnum; i++) {
+        let chunkinfo = {
+          arr: chunksTofill.slice(fillBatchSize * i, fillBatchSize * (i + 1)),
+        };
+        addWorkerJob(chunkinfo, "worldFill");
+      }
+    }
+  }
 
-  function getListOfNearByChunksById(currentchunk) {
-    let ws = worldChunkSize;
+  function getListOfNearByChunksById(currentchunk, radius) {
+    // console.log(`list of nearby ${currentchunk} rad ${radius}`)
+    let ws = worldSettings.worldSize;
     let nearby = [];
     let ccy = Math.floor(currentchunk / ws);
     let ccx = currentchunk - ccy * ws;
+    // console.log({currentchunk,ccy,ccx})
     // console.log('currentchunk',currentchunk)
 
-    for (let x = -viewRadius; x <= viewRadius; x++) {
-      for (let y = -viewRadius; y <= viewRadius; y++) {
+    for (let x = -radius; x <= radius; x++) {
+      for (let y = -radius; y <= radius; y++) {
         let ans = currentchunk + ws * y + x;
         //out of map edge
-        if (ans < 0 || ans > ws * ws) {
+        if (ans < 0 || ans >= ws * ws) {
           continue;
         }
 
@@ -200,13 +324,18 @@ export const Cubes = ({activeTextureREF,REF_ALLCUBES,updateInitStatus,initStatus
 
         //out of view
         let chunkDist = ((ansx - ccx) ** 2 + (ansy - ccy) ** 2) ** 0.5;
-        if (chunkDist > viewRadius) {
+        if (chunkDist > radius) {
           continue;
         }
 
+        // console.log({x,y,ans})
         nearby.push(ans);
       }
     }
+    // console.log({before:nearby.length,nearby})
+    nearby = new Array(...new Set(nearby));
+    // console.log({after:nearby.length,nearby})
+
     return nearby;
   }
 

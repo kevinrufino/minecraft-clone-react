@@ -5,12 +5,14 @@ import { Vector3, Euler } from "three";
 import settings from "../devOnline";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useStore } from "../hooks/useStore";
+import { FPV } from "./FPV";
 
 const JUMP_HIEGHT = 8;
 const SPEED = 4;
 const QUICKFACTOR = 10;
 
-export const Player = ({myradius = .5,moveBools}) => {
+export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
+    const oneTimeBool = useRef(true)
     const { camera,scene } = useThree();
     const { 
         moveBackward,
@@ -20,25 +22,20 @@ export const Player = ({myradius = .5,moveBools}) => {
         jump,
         moveQuick
     } = useKeyboard();
+    // console.log(playerStartingPostion)
     const [ref, api] = useSphere(() => ({
         mass: 0,
         type: 'Dynamic',
         // position: [2,1,2],
-        position: settings.startingPositionDefault,
+        position: playerStartingPostion,
         rotation: settings.startingRotationDefault,
-        // rotation: [
-        //     0 *Math.PI/180,
-        //     180 *Math.PI/180,
-        //     0],
-
+        // rotation: [0 *Math.PI/180, 180 *Math.PI/180, 0],
         args:[myradius]
     }))
-// console.log(settings.startingRotationDefault)
-// console.log([0 *Math.PI/180,180 *Math.PI/180,0])
     const vel = useRef([0,0,0])
-    const pos = useRef([0,0,0])
-    const rot = useRef([0,180 *Math.PI/180,0,'XYZ'])
-    const ang = useRef([0,0,0])
+    const pos = useRef(playerStartingPostion)
+    const rot = useRef([0,180 *Math.PI/180,0,'YXZ'])
+    // const ang = useRef([0,0,0])
     const [socket,online_sendPos] = useStore((state)=>[state.socket,state.online_sendPos])
 
 
@@ -63,6 +60,7 @@ export const Player = ({myradius = .5,moveBools}) => {
 
         // camera follows "player"
         if(!settings.ignoreCameraFollowPlayer){
+            // console.log("should be")
             camera.position.copy(new Vector3(
                 pos.current[0],
                 pos.current[1],
@@ -119,11 +117,13 @@ export const Player = ({myradius = .5,moveBools}) => {
 
     function checkMapLimits(direction){
         let [x,y,z] = [direction.x,direction.y,direction.z]
+        let worldSideLen = settings.worldSettings.chunkSize * settings.worldSettings.worldSize
+        // console.log({worldSideLen})
 
         if(pos.current[0]<=0.1){
             x=1
         }
-        if(pos.current[0]>=255.1){
+        if(pos.current[0]>=worldSideLen-.9){
             x=-1
         }
         if(pos.current[1]<=0.1){
@@ -135,7 +135,7 @@ export const Player = ({myradius = .5,moveBools}) => {
         if(pos.current[2]<=0.1){
             z=1
         }
-        if(pos.current[2]>=255.1){
+        if(pos.current[2]>=worldSideLen-.9){
             z=-1
         }
 
@@ -309,13 +309,9 @@ export const Player = ({myradius = .5,moveBools}) => {
     useEffect(() => {
         api.velocity.subscribe((v) => vel.current = v)
     }, [api.velocity])
+
     useEffect(() => {
-        // console.log(`---position useeffect`)
-        api.position.subscribe((p) =>{
-            // console.log(p)
-            pos.current = p
-        } 
-        )
+        api.position.subscribe((p) =>{pos.current = p} )
     }, [api.position])
     // useEffect(() => {
     //     console.log(`---rotation useeffect`)
@@ -336,11 +332,22 @@ export const Player = ({myradius = .5,moveBools}) => {
     
 
     useFrame(() => {
+        if(oneTimeBool.current){
+            // console.log("should be")
+            oneTimeBool.current =false
+
+            // camera.rotation.copy(new Euler(0,180 *Math.PI/180,0,'XYZ'))
+            // console.log(...[...settings.startingRotationDefault,'XYZ'])
+            camera.rotation.copy(new Euler(...[...settings.startingRotationDefault,'YXZ']))
+            // let psp = playerStartingPostion
+            // camera.position.copy(new Vector3( psp[0], psp[1], psp[2]))
+        }
         // doOnlinePlayerPos()
-        if(false){
-            doMovement()
-        }else{
+        if(settings.movewithJOY_BOOL){
             doMovementWithJoy()
+        }else{
+  
+            doMovement()
             // testmorethings()
             // testorthings2()
         }
@@ -349,10 +356,13 @@ export const Player = ({myradius = .5,moveBools}) => {
     })
 
     return (
+        <>
         <mesh  ref={ref}>
             {/* <boxGeometry attach="geometry" args={[5,5,5]}/> */}
             <sphereGeometry attach="geometry" args={[myradius]}/>
             <meshStandardMaterial attach="material" color="orange" />
         </mesh>
+        {settings.movewithJOY_BOOL? <></> : <FPV />}
+        </>
     )
 }

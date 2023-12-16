@@ -15,59 +15,61 @@ import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineCo
 import { LoadingWorldPage } from "./components/LoadingWorldPage";
 import JoyStick from "./hooks/Joystick";
 import LowerControlStrip from "./hooks/LowerControlStrip";
+import TitleConfig from "./components/TitleConfig";
 
 function App() {
   // console.log("-------- rerender App");
+  const movewithJOY_BOOL = true
   const [establishedConn] = useStore((state) => [state.establishedConn]);
   const activeTextureREF = useRef("dirt");
 
-  const chunksmadecounter = useRef({loaddone:false , track:{} })
-  const loadingscreenhtml= useRef()
-  const [initStatus,setInitStatus] = useState({
-    buildWorkers:0,
-    initWorkers:0,
-    initWorld:0,
-  })
+  const [playerConfigReady,setPCR] = useState(false)
 
-  let moveBools=useRef({
-    moveBackward:false,
-    moveForward:false,
-    moveLeft:false,
-    moveRight:false,
-    jump:false,
-    moveQuick:false,
-    moveQuickTC:0, //tap count
-    moveQuickTT:0, //tap time
-    jumpTT:0,
-    jumpTC:0,
-    camUp:false,
-    camDown:false,
-    camLeft:false,
-    camRight:false,
-    camCenter:false,
-    camCenterTT:0,
-    camCenterTC:0
-})
+  const chunksmadecounter = useRef({ loaddone: false, track: {count:0,max:settings.worldSettings.worldSize**2} });
+  const loadingscreenhtml = useRef();
+  const [initStatus, setInitStatus] = useState({
+    buildWorkers: 0,
+    initWorkers: 0,
+    initWorld: 0,
+  });
 
-  function updateInitStatus(obj){ 
-    setInitStatus({...initStatus.current,...obj})
+  let moveBools = useRef({
+    moveBackward: false,
+    moveForward: false,
+    moveLeft: false,
+    moveRight: false,
+    jump: false,
+    moveQuick: false,
+    moveQuickTC: 0, //tap count
+    moveQuickTT: 0, //tap time
+    jumpTT: 0,
+    jumpTC: 0,
+    camUp: false,
+    camDown: false,
+    camLeft: false,
+    camRight: false,
+    camCenter: false,
+    camCenterTT: 0,
+    camCenterTC: 0,
+  });
+
+  function updateInitStatus(obj) {
+    setInitStatus({ ...initStatus.current, ...obj });
   }
 
-  function addonechunkmade(num){
-    let max = settings.FullWorldChunkSideLength**2
-    chunksmadecounter.current.track[num]=true
-    let madecount=Object.keys(chunksmadecounter.current.track).length
+  function addonechunkmade(num) {
+    // let max = settings.FullWorldChunkSideLength ** 2;
+    // chunksmadecounter.current.track[num] = true;
+    // let madecount = Object.keys(chunksmadecounter.current.track).length;
 
-    if(3<=madecount && !chunksmadecounter.current.loaddone){
-    chunksmadecounter.current.loaddone=true
-    }
-    
-    if(loadingscreenhtml.current){
-      loadingscreenhtml.current.textContent=`${madecount}/${max}`
-    }
+    // if (3 <= madecount && !chunksmadecounter.current.loaddone) {
+    //   chunksmadecounter.current.loaddone = true;
+    // }
 
+    // if (loadingscreenhtml.current) {
+    //   loadingscreenhtml.current.textContent = `${madecount}/${max}`;
+    // }
   }
-  
 
   function gettingWorldLoadScreen() {
     //this is meant to be a place holder for a potential loading screen as we generate enough of the world before the player.
@@ -80,49 +82,72 @@ function App() {
     );
   }
 
-  function goToGame() {
-    return (
-      <>
-        <LoadingWorldPage buildWorkers={initStatus.buildWorkers} chunksmadecounter={chunksmadecounter} />
-        <Canvas>
-          {settings.hideSky ? <></> : <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
-          <ambientLight intensity={0.5} />
-          {settings.stopCursorCapture ? <></> : <FPV />}
+  function playerGivenGameSettings(obj){
+    console.log('from player given game settings')
+    setPCR(true)
 
-          <Physics>
-            {/* <Debug color="red" scale={1}  > */}
-            <Scene activeTextureREF={activeTextureREF} updateInitStatus={updateInitStatus} initStatus={initStatus} addonechunkmade={addonechunkmade} chunksmadecounter={chunksmadecounter} moveBools={moveBools}/>
-            {/* </Debug> */}
-          </Physics>
-
-          {settings.useOrbitals ? <OrbitControls   /> : <></>}
-          <axesHelper name={"axesHelper"} scale={10} />
-        </Canvas>
-        {settings.ignoreCameraFollowPlayer ? <></> : <div className="cursor centered absolute">+</div>}
-        {settings.hideUIContent ? (<></>) : (
-          <>
-            <Menu />
-            <Help />
-          </>
-        )}
-
-        {settings.hideTextSelect ? <></> : <TextureSelector activeTextureREF={activeTextureREF} />}
-        <LowerControlStrip moveBools={moveBools} />
-      </>
-    );
+    
   }
 
-  function showtestor(){
+  function goToGame() {
+    // if(playerConfigReady){
+    if(true){
+
+      return (
+        <>
+          <LoadingWorldPage buildWorkers={initStatus.buildWorkers} chunksmadecounter={chunksmadecounter} myRef={loadingscreenhtml} />
+          <Canvas>
+            {settings.hideSky ? <></> : <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
+            <ambientLight intensity={0.5} />
+
+  
+            <Physics>
+              {/* <Debug color="red" scale={1}  > */}
+              <Scene
+                activeTextureREF={activeTextureREF}
+                updateInitStatus={updateInitStatus}
+                initStatus={initStatus}
+                addonechunkmade={addonechunkmade}
+                chunksmadecounter={chunksmadecounter}
+                moveBools={moveBools}
+                movewithJOY_BOOL={movewithJOY_BOOL}
+              />
+              {/* </Debug> */}
+            </Physics>
+  
+            {settings.useOrbitals ? <OrbitControls /> : <></>}
+            <axesHelper name={"axesHelper"} scale={10} />
+          </Canvas>
+          {settings.ignoreCameraFollowPlayer ? <></> : <div className="cursor centered absolute">+</div>}
+          {settings.hideUIContent ? (
+            <></>
+          ) : (
+            <>
+              <Menu />
+              <Help />
+            </>
+          )}
+  
+          {settings.hideTextSelect ? <></> : <TextureSelector activeTextureREF={activeTextureREF} />}
+          {settings.movewithJOY_BOOL?<LowerControlStrip moveBools={moveBools} />:<></>}
+        </>
+      );
+    }else{
+      return(
+        <>
+        <TitleConfig playerGivenGameSettings={playerGivenGameSettings}/>
+        </>
+      )
+    }
+  }
 
 
-    return <>
-    <LowerControlStrip moveBools={moveBools} />
-    </>
-
+  function testor() {
+    return(<></>)
   }
 
   return establishedConn ? goToGame() : gettingWorldLoadScreen();
-  // return showtestor();
+  // return testor();
 }
 
 export default App;

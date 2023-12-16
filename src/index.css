@@ -100,3 +100,111 @@ body {
 .joystick{
   border: red 1px solid;
 }
+
+@import url('https://fonts.googleapis.com/css?family=Press+Start+2P');
+@import url('https://fonts.googleapis.com/css2?family=Rubik+Iso&family=Wallpoet&display=swap');
+
+.minecraft-text {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 24px; /* Adjust the size as needed */
+  color: #00ff00; /* Set your desired color */
+  stroke: #00ff00;
+}
+.minecraft-text2 {
+  font-family: 'Rubik Iso', cursive;
+  color: black; /* Set your desired color */
+  stroke: black;
+}
+.minecraft-text3 {
+  font-family: 'Wallpoet', cursive;
+  /* font-size: 80px;  */
+  color: #e7f0e7;
+  stroke: #ebf1eb;
+  stroke-width: .5px;
+  /* background-color: #00ff00; */
+}
+
+
+.card {
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+    width: 40vw;
+    height: 80vh;
+  }
+  
+
+  .card:hover {
+    box-shadow: 16px 16px 16px 16px rgba(0,0,0,0.6);
+  }
+  
+
+  .container {
+    padding: 2px 16px;
+    height: 100%;
+    background-color: red;
+  }
+
+  .pageContainer{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    position:absolute;
+    top: 0;
+    left:0;
+  }
+
+
+
+
+.input-group > * {
+  font-size: small;
+}
+
+  input,
+  textarea {
+    /* font-size: small; */
+  }
+  
+  .input-group {
+    display: table;
+    border-collapse: collapse;
+    width: 100%;
+    height: 10px;
+  }
+  
+  .input-group > * {
+    display: table-cell;
+    /* border: 1px solid black; */
+    vertical-align: middle;
+  }
+  
+  div.input-group> label{
+    border-radius: 10px 0px 0px 10px;
+  }
+  div.input-group-area> input{
+    border-radius: 0px 10px 10px 0px;
+  }
+  
+  .input-group-icon {
+    background-color: #eee;
+    color: #777;
+    padding: 5px 5px;
+  }
+  
+  .input-group-area {
+    width: 100%;
+  }
+  
+  .input-group input {
+    border: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0px;
+  }
+
+
+
+

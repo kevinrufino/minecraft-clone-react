@@ -18,16 +18,16 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
 
     useEffect(()=>{
         if(joycanva.current){
-            console.log('-------------')
+            // console.log('-------------')
 
             let eleData=joycanva.current.getBoundingClientRect()
-            console.log({myId,eleData})
+            // console.log({myId,eleData})
             info.current.elepos=joycanva.current.getBoundingClientRect()
             // info.current.origx=eleData.x+startx
             // info.current.origy=eleData.y+starty
             // info.current.currx=info.current.origx
             // info.current.curry=info.current.origy
-            console.log('-------------')
+            // console.log('-------------')
             let can = joycanva.current
             // can.addEventListener("pointerdown",mousedown)
             // can.addEventListener("pointerup",mouseup)
@@ -126,9 +126,9 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
     }
 
     function mousedown(e){
-        console.log("---mouseDown")
+        // console.log("---mouseDown")
         e.preventDefault()
-        console.log([...e.changedTouches][0].clientX)
+        // console.log([...e.changedTouches][0].clientX)
         let st={} //screen touch
         st.x=[...e.changedTouches][0].clientX
         st.y=[...e.changedTouches][0].clientY
@@ -166,14 +166,14 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
 
     }
     function mouseup(e){
-        console.log('---mouseup')
+        // console.log('---mouseup')
         e.preventDefault()
         resetStick()
     }
 
     function mousemove(e){
-        console.log("---mosemove")
-        console.log(e)
+        // console.log("---mosemove")
+        // console.log(e)
         e.preventDefault()
         let xside=info.current.elepos.x+givenWidth
         let yside=info.current.elepos.y+givenHeight

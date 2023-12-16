@@ -7,11 +7,15 @@ onmessage = (e) => {
   if (e.data.init) {
     // console.log('[FROM WORKER] - INIT')
     initializeWorker(e.data.init);
-  } else if (e.data.fillWorld) {
-    // console.log(`[FROM WORKER-${worldSet.w_ind}] - chunkgroup`,e.data.fillWorld)
-    initialFill(e.data.fillWorld);
+  } else if (e.data.worldFill) {
+    // console.log(`[FROM WORKER-${worldSet.w_ind}] - chunkgroup`,e.data.worldFill)
+    initialFill(e.data.worldFill);
+  } else if (e.data.userChange) {
+    console.log(`[FROM WORKER-${worldSet.w_ind}] - regular flow start`)
+    regularFlow(e.data.userChange);
   } else {
-    regularFlow(e.data);
+    console.log(`[FROM WORKER-${worldSet.w_ind}] -ERROR ERROR UNKNOWN TASK GIVEN`)
+    console.log(`[FROM WORKER-${worldSet.w_ind}] - ${Object.keys(e.data)}`,e)
   }
 };
 
@@ -38,7 +42,7 @@ function regularFlow(data) {
     chunkNumber,
     blocksOfChunk: chunkBlocks,
   };
-  postMessage(singleChunkResponse);
+  postMessage({regFlow:singleChunkResponse});
 }
 
 const AMTmap = {
@@ -199,9 +203,12 @@ function genFaceArrays(t, blocks, chunkBlocks) {
 function initialFill(chunkNumbers) {
   let fillRes = {};
   chunkNumbers.forEach((chunkNumber) => {
-    let ws = 16;
-    let cnX = Math.floor(chunkNumber / ws);
-    let cnZ = (chunkNumber / ws - cnX) * ws;
+    let cS = worldSet.chunkSize;
+    let wS = worldSet.worldSize;
+    // let cS = worldSet.chunkSize;
+    // let ws = worldSet.worldSize;
+    let cnX = Math.floor(chunkNumber / wS);
+    let cnZ = (chunkNumber / wS - cnX) * wS;
     const noise2D = worldSet["genNoise2D"];
     let info = {};
     let infoList = [];
@@ -214,9 +221,9 @@ function initialFill(chunkNumbers) {
 
     let difflimit = AMTmapkeys.length;
 
-    for (let x = 16 * cnX; x < 16 * cnX + 16; x++) {
+    for (let x = cS * cnX; x < cS * cnX + cS; x++) {
       for (let y = -1 * Math.abs(depth); y < ys; y++) {
-        for (let z = 16 * cnZ; z < 16 * cnZ + 16; z++) {
+        for (let z = cS * cnZ; z < cS * cnZ + cS; z++) {
           ty = worldSet.showFlatWorld ? y : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) + y;
 
           key = makeKey(x, ty, z);
