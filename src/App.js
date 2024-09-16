@@ -57,20 +57,6 @@ function App() {
     setInitStatus({ ...initStatus.current, ...obj });
   }
 
-  function addonechunkmade(num) {
-    // let max = settings.FullWorldChunkSideLength ** 2;
-    // chunksmadecounter.current.track[num] = true;
-    // let madecount = Object.keys(chunksmadecounter.current.track).length;
-
-    // if (3 <= madecount && !chunksmadecounter.current.loaddone) {
-    //   chunksmadecounter.current.loaddone = true;
-    // }
-
-    // if (loadingscreenhtml.current) {
-    //   loadingscreenhtml.current.textContent = `${madecount}/${max}`;
-    // }
-  }
-
   function gettingWorldLoadScreen() {
     //this is meant to be a place holder for a potential loading screen as we generate enough of the world before the player.
     //also a waiting screen for when some one is waiting to connect to online server
@@ -90,8 +76,8 @@ function App() {
   }
 
   function goToGame() {
-    // if(playerConfigReady){
-    if(true){
+    if(playerConfigReady){
+    // if(true){
 
       return (
         <>
@@ -107,7 +93,6 @@ function App() {
                 activeTextureREF={activeTextureREF}
                 updateInitStatus={updateInitStatus}
                 initStatus={initStatus}
-                addonechunkmade={addonechunkmade}
                 chunksmadecounter={chunksmadecounter}
                 moveBools={moveBools}
                 movewithJOY_BOOL={movewithJOY_BOOL}
