@@ -1,6 +1,10 @@
 const TitleConfig = ({playerGivenGameSettings}) => {
   function handleClickPlay() {
-    console.log("WOW");
+    console.log("FromClickingPlay:",{width:window.innerWidth});
+    let settingChanges={}
+    settingChanges.movewithJOY_BOOL=window.innerWidth<400
+
+    playerGivenGameSettings(settingChanges)
   }
 
   let svginfo = {};
