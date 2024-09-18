@@ -6,7 +6,7 @@ const settings= {
     useOrbitals:false,
 
     hidePlayer: false,
-    hideOtherPlayers: true,
+    hideOtherPlayers: false,
     ignoreCameraFollowPlayer: false,
     movewithJOY_BOOL: false, // laptop default
 
@@ -52,7 +52,7 @@ settings.startingChunk = settings.worldSettings.worldSize * Math.floor(settings.
 
 export default settings
 
-/* Default settings
+/* Default settings -- we need this but i havent been updating this as i went.
 
 
 online: false,

@@ -4,17 +4,15 @@ import { useFrame, useThree } from "@react-three/fiber";
 import settings from "../../devOnline";
 
 export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initStatus, chunksmadecounter }) => {
-  // console.log("-------- rerender Cubes");
   const { camera } = useThree();
   const [FillerLoadDoneValue, setFillerLoadDone] = useState(false);
-  // let chunkCounter = useRef(0)
   let viewRadius = settings.viewRadius; //this number is distance from current place chunks are allowed to be shown
   let outerViewRadius = settings.outerViewRadius; //this number is the distance from current place we insure are built/ready to be shown
   let fillBatchSize = settings.fillBatchSize; // chunks allowed per worker job
   let worldSettings = settings.worldSettings;
   let renderDistPrecentage = settings.renderDistPrecentage;
 
-  // i believe for most machines 4 is the limit but i am using 3 to be safe
+  // i believe for most machines 4 workers is the effective limit but i am using 3 to be safe
   let workerCount = settings.workerCount; //a set number of workers
   const workerPendingJob = useRef([]);
   const workerWorking = useRef(new Array(workerCount).fill(true));
@@ -33,8 +31,8 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     example
     chunks.current is whats  below
       [{
-        keys:
-        count:
+        keys: [0.0.0,0.0.1,...]
+        count: ####
         draw:{ cc,vertices, uvs, normals,rere}
       }
       ,...] 
@@ -48,14 +46,11 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
       console.log("myWorker Error:", err);
     };
 
-    //responsuble for handeling the workers response
+    //responsible for handeling the workers response
     worker.onmessage = (e) => {
-      // console.log(`heard back from worker`,Object.keys(e.data))
       if (e.data.regFlow) {
         handleWorkerUserChangeResponse(id, e.data.regFlow);
       } else if (e.data.worldFiller) {
-        // chunkCounter.current++
-        // console.log(e.data.worldFiller.chunkNumbers.length)
         chunksmadecounter.current.track.count+=e.data.worldFiller.chunkNumbers.length
         if(chunksmadecounter.current.ref){
           chunksmadecounter.current.ref.updateDisplay()
@@ -85,23 +80,21 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
 
   function handleWorkerUserChangeResponse(data) {
     let { vertices, uvs, normals, faceIndexMap, count, chunkNumber } = data;
-    // console.log(`rec: ${chunkNumber}`);
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
     normals = new Float32Array(normals);
     cubeFaceIndexesREFlist.current[chunkNumber] = faceIndexMap;
 
     chunks.current[chunkNumber].draw = { cc: count, vertices, uvs, normals, rere: true };
-    // worker.terminate(); //use to kill the workers
+    // worker.terminate(); //use to kill the workers // unsure if we ever have too
   }
   function handleWorkerWorldFillResponse(worldFiller) {
     REF_ALLCUBES.current = { ...REF_ALLCUBES.current, ...worldFiller.ac };
-    // console.log(`Response`,worldFiller)
+
     worldFiller.chunkNumbers.forEach((cn) => {
       chunks.current[cn] = worldFiller.testor[cn];
       cubeFaceIndexesREFlist.current[cn] = worldFiller.testor[cn].faceIndexMap;
     });
-    // console.log(chunks)
     if (workerPendingJob.current.length == 0) {
       chunksmadecounter.current.loaddone = true;
       chunksmadecounter.current.ref.updateDisplay()
@@ -112,9 +105,6 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
   function giveWorkerUserChangeJob(workerId, chunkinfo) {
     let chunkNumber = chunkinfo.chunkNumber;
     let t = 0.5;
-    // console.log(getListOfNearByChunksById(chunkNumber,1))
-    // console.log('ref all cubes:',REF_ALLCUBES.current)
-    // console.log('chunks',chunks.current)
     let adjacentchunks = getListOfNearByChunksById(chunkNumber, 1);
     let neededblocks = {};
     adjacentchunks.forEach((cn) => {
@@ -130,11 +120,9 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     workerList.current[workerId].postMessage({ worldFill: chunkinfo.arr });
   }
 
+  //this function is for worker job management
   //if there is a new job give it to an open worker if not Q it up
   function addWorkerJob(chunkinfo, type) {
-  // if(chunksmadecounter.current.loaddone){
-    // console.log("new worker job:",{type,chunkinfo})
-  // }
     let taken = false; //worker took new job
     for (let i = 0; i < workerList.current.length; i++) {
       if (!workerWorking.current[i] && !taken) {
@@ -157,6 +145,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     }
   }
 
+  //attempt to give workers a job priority -- unfinished
   function jobTypePriority(type) {
     switch (type) {
       case "user":
@@ -170,9 +159,8 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     }
   }
 
+  //function executed by workers asking for more work
   function getPendingJob(workernum) {
-    // console.log('pending',new Array(workerPendingJob.current))
-
     let job = workerPendingJob.current.shift();
     if (job.type == "worldFill") {
       giveWorkerWorldFillJob(workernum, job.chunkinfo);
@@ -189,8 +177,6 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     let pChunk = wS * Math.floor(px / cS) + Math.floor(pz / cS);
 
     if (playerChunkPosition.current != pChunk && chunksmadecounter.current.loaddone && FillerLoadDoneValue) {
-      // console.log("--------------");
-      // console.log("######################################################chunk-change", { px, pz, pChunk });
       playerChunkPosition.current = pChunk;
       console.log({pChunk})
       if(calcDistBetweenChunksFromIds(lastRenderChunk.current,pChunk)>=(renderDistPrecentage*(outerViewRadius-viewRadius))){
@@ -198,9 +184,6 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
       }
       updateDisplayedChunks(pChunk);
     }
-    // if( chunksmadecounter.ref){
-    //   console.log(chunksmadecounter.ref.children[0].textContent)
-    // }
   });
 
   useEffect(() => {
@@ -217,12 +200,8 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     }
     // triggering world fill once
     if (workerList.current[0] && !chunksmadecounter.current.loaddone) {
-      // let worldFillarr=new Array(worldSettings.worldSize ** 2).fill(0).map((_, ind) => {return ind;})
-      // let worldFillarr=new Array(worldSettings.worldSize ** 2).fill(0).map((_, ind) => {return ind;})
       let ourcurrentchunk = settings.startingChunk
-      // console.log({ourcurrentchunk})
       let worldFillarr = getListOfNearByChunksById(ourcurrentchunk, outerViewRadius);
-      // console.log({worldFillarr})
       let ws = worldSettings.worldSize;
       let worldFillarrsort = worldFillarr.map((val) => {
         let ay = Math.floor(val / ws);
@@ -238,7 +217,6 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
       worldFillarr = worldFillarrsort.map((a) => {
         return a.val;
       });
-      // console.log(worldFillarr)
       let batchnum = Math.floor(worldFillarr.length / fillBatchSize);
       if (worldFillarr.length % fillBatchSize > 0) {
         batchnum++;
@@ -246,7 +224,6 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
 
       for (let i = 0; i < batchnum; i++) {
         let chunkinfo = {
-          // arr:worldFillarr.slice(batchnum*i,batchnum*(i+1))
           arr: worldFillarr.slice(fillBatchSize * i, fillBatchSize * (i + 1)),
         };
         addWorkerJob(chunkinfo, "worldFill");
@@ -256,26 +233,16 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
 
   function updateDisplayedChunks(currentChunk) {
     let chunksToDisplay = getListOfNearByChunksById(currentChunk, viewRadius);
-    // chunksToDisplay=[0,1,3,19]
-    // console.log({chunksToDisplay})
-    // console.log(chunksToDisplay)
-
     let removeChunks = activeChunks.current.filter((id) => {
       return !chunksToDisplay.includes(id);
     });
-
     let newlyDisplayChunks = chunksToDisplay.filter((id) => {
       return !activeChunks.current.includes(id);
     });
-
     removeChunks.forEach((id) => {
       chunks.current[id].visible = false;
     });
-
     newlyDisplayChunks.forEach((id) => {
-      // console.log('the id:',id)
-      // console.log(chunks.current[id])
-
       chunks.current[id].visible = true;
     });
     activeChunks.current = chunksToDisplay;
@@ -283,11 +250,9 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
   function checkWorldFilledRadius(currentChunk) {
     lastRenderChunk.current = playerChunkPosition.current
     let chunksTofill = getListOfNearByChunksById(currentChunk, outerViewRadius);
-    // console.log({chunksTofill})
     chunksTofill = chunksTofill.filter((cn) => {
       return !chunks.current[cn].count;
     });
-    // console.log("have not been filled", chunksTofill);
     if (chunksTofill.length) {
       let batchnum = Math.floor(chunksTofill.length / fillBatchSize);
       if (chunksTofill.length % fillBatchSize > 0) {
@@ -303,13 +268,10 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
   }
 
   function getListOfNearByChunksById(currentchunk, radius) {
-    // console.log(`list of nearby ${currentchunk} rad ${radius}`)
     let ws = worldSettings.worldSize;
     let nearby = [];
     let ccy = Math.floor(currentchunk / ws);
     let ccx = currentchunk - ccy * ws;
-    // console.log({currentchunk,ccy,ccx})
-    // console.log('currentchunk',currentchunk)
 
     for (let x = -radius; x <= radius; x++) {
       for (let y = -radius; y <= radius; y++) {
@@ -328,13 +290,11 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
           continue;
         }
 
-        // console.log({x,y,ans})
         nearby.push(ans);
       }
     }
-    // console.log({before:nearby.length,nearby})
+
     nearby = new Array(...new Set(nearby));
-    // console.log({after:nearby.length,nearby})
 
     return nearby;
   }

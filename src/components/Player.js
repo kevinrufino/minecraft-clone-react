@@ -22,22 +22,17 @@ export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
         jump,
         moveQuick
     } = useKeyboard();
-    // console.log(playerStartingPostion)
     const [ref, api] = useSphere(() => ({
         mass: 0,
         type: 'Dynamic',
-        // position: [2,1,2],
         position: playerStartingPostion,
         rotation: settings.startingRotationDefault,
-        // rotation: [0 *Math.PI/180, 180 *Math.PI/180, 0],
         args:[myradius]
     }))
     const vel = useRef([0,0,0])
     const pos = useRef(playerStartingPostion)
     const rot = useRef([0,180 *Math.PI/180,0,'YXZ'])
-    // const ang = useRef([0,0,0])
     const [socket,online_sendPos] = useStore((state)=>[state.socket,state.online_sendPos])
-
 
     function doMovement(){
         const direction = new Vector3()
@@ -50,7 +45,7 @@ export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
             .applyEuler(camera.rotation)
 
 
-        //stop player from moving into the negatives
+        //stop player from moving into the negatives -- outside world boundries
         api.velocity.set(...checkMapLimits(direction))
 
         // jump
@@ -60,7 +55,6 @@ export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
 
         // camera follows "player"
         if(!settings.ignoreCameraFollowPlayer){
-            // console.log("should be")
             camera.position.copy(new Vector3(
                 pos.current[0],
                 pos.current[1],
@@ -70,32 +64,18 @@ export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
     }
 
     function doMovementWithJoy(){
-        let le=0
-        let ri=0
-        let fo=0
-        let ba =0
         const direction = new Vector3()
         const frontVector = new Vector3(0,0,(moveBools.current.moveBackward ? 1 : 0) - (moveBools.current.moveForward ? 1 : 0))
         const sideVector = new Vector3( (moveBools.current.moveLeft ? 1 : 0) - (moveBools.current.moveRight ? 1 : 0), 0, 0 )
-        // const frontVector = new Vector3(0,0,fo?1:ba?-1:0)
-        // const sideVector = new Vector3( 0, 0, 0 )
         direction
             .subVectors(frontVector, sideVector)
             .normalize()
             .multiplyScalar(SPEED*(moveBools.current.moveQuick*QUICKFACTOR+1))
             .applyEuler(new Euler(...rot.current))
-        // console.log(direction)
-
-
-            // console.log(direction)
-            // console.log(camera.rotation)
+ 
         //stop player from moving into the negatives
         api.velocity.set(...checkMapLimits(direction))
-        // api.velocity.set(...[
-        //     .1,
-        //     0,
-        //     .1
-        // ])
+
 
         // jump
         // if (jump && Math.abs(vel.current[1]) < .05) {
@@ -118,7 +98,6 @@ export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
     function checkMapLimits(direction){
         let [x,y,z] = [direction.x,direction.y,direction.z]
         let worldSideLen = settings.worldSettings.chunkSize * settings.worldSettings.worldSize
-        // console.log({worldSideLen})
 
         if(pos.current[0]<=0.1){
             x=1
@@ -142,68 +121,13 @@ export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
         return [x,y,z]
     }
 
+    // meant to help give the server a players location so other players can see where said player is
     function doOnlinePlayerPos(){
         if(settings.online){
             if(socket.connected){
                     online_sendPos(pos.current)
             }
         }
-    }
-
-    const ti = useRef({
-        s:0,
-        x:20,
-        y:-5,
-        z:20,
-    })
-    function testmorethings(){
-        let fo=0
-        let ba=0
-        let le=0
-        let ri=0
-
-        const direction = new Vector3()
-        const frontVector = new Vector3(0,0,(ba ? 1 : 0) - (fo ? 1 : 0))
-        const sideVector = new Vector3( (le ? 1 : 0) - (ri ? 1 : 0), 0, 0 )
-        direction
-            .subVectors(frontVector, sideVector)
-            .normalize()
-            .multiplyScalar(100)
-            .applyEuler(camera.rotation)
-
-        
-        // if(!settings.ignoreCameraFollowPlayer){
-        //     camera.position.copy(new Vector3(
-        //         pos.current[0],
-        //         pos.current[1],
-        //         pos.current[2]
-        //         ))
-        // }
-        // if(ti.current.s<2){
-            let sam = ti.current
-            // sam.x+=.01
-            // console.log(sam)
-            // console.log({
-            //     x:camera.position.x +direction.x,
-            //     y:camera.position.y+direction.y,
-            //     z:camera.position.z+direction.z
-            // })
-            camera.lookAt(
-                camera.position.x +direction.x,
-                camera.position.y+direction.y,
-                camera.position.z+direction.z
-            )
-            // camera.position.copy(new Vector3(
-            //     camera.position.x +direction.x,
-            //     camera.position.y+direction.y,
-            //     camera.position.z+direction.z
-            //     ))
-
-            // console.log(direction)
-            // console.log(camera)
-            // ti.current.s++
-        // }
-
     }
 
     function doSightWithJoy(){
@@ -313,50 +237,20 @@ export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
     useEffect(() => {
         api.position.subscribe((p) =>{pos.current = p} )
     }, [api.position])
-    // useEffect(() => {
-    //     console.log(`---rotation useeffect`)
-    //     api.rotation.subscribe((r) =>{
-    //         // console.log(r)
-    //         rot.current = r
-    //     } 
-    //     )
-    // }, [api.rotation])
-    // useEffect(() => {
-    //     console.log(`---angVEL useeffect`)
-    //     api.angularVelocity.subscribe((av) =>{
-    //         // console.log(r)
-    //         ang.current = av
-    //     } 
-    //     )
-    // }, [api.angularVelocity])
     
 
     useFrame(() => {
         if(oneTimeBool.current){
-            // console.log("should be")
             oneTimeBool.current =false
-
-            // camera.rotation.copy(new Euler(0,180 *Math.PI/180,0,'XYZ'))
-            // console.log(...[...settings.startingRotationDefault,'XYZ'])
             camera.rotation.copy(new Euler(...[...settings.startingRotationDefault,'YXZ']))
-            // let psp = playerStartingPostion
-            // camera.position.copy(new Vector3( psp[0], psp[1], psp[2]))
         }
         // doOnlinePlayerPos()
-        if(settings.movewithJOY_BOOL){
-            doMovementWithJoy()
-        }else{
-  
-            doMovement()
-            // testmorethings()
-            // testorthings2()
-        }
-
-        // console.log(scene)
+        settings.movewithJOY_BOOL?doMovementWithJoy():doMovement()
     })
 
     return (
         <>
+        {/* THIS IS WHERE THE PLAYER BODY 3JS should go */}
         <mesh  ref={ref}>
             {/* <boxGeometry attach="geometry" args={[5,5,5]}/> */}
             <sphereGeometry attach="geometry" args={[myradius]}/>

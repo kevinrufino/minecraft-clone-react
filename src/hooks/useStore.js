@@ -1,6 +1,22 @@
 import create from "zustand";
 import { nanoid } from "nanoid";
 
+
+/*
+
+UseStore is not used anymore, we talk about deleteing this.
+
+Main Reason is that it got in the way of renders, I believe useRef wasn't something it let us use.
+
+Future:
+  might be helpful in terms future save and load worlds?? unsure.
+
+
+
+*/
+
+
+
 const getLocalStorage = (key) => JSON.parse(window.localStorage.getItem(key));
 const setLocalStorage = (key, value) => window.localStorage.setItem(key, JSON.stringify(value));
 

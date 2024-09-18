@@ -34,12 +34,9 @@ export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, init
       }
 
     setPSP(sp)
-
-
   }
 
   useEffect(()=>{
-    // console.log({allSet})
     if(playerStartPos[0]==0){
       setupPlayerStartingPosition()
     }
@@ -53,13 +50,12 @@ export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, init
     return (
       <>
         {settings.hidePlayer ? <></> : <Player moveBools={moveBools}  playerStartingPostion={playerStartPos} />}
-        {/* {settings.hidePlayer ? <></> : <Player moveBools={moveBools} />} */}
-        {/* {settings.hideOtherPlayers ? <></> : <OtherPlayers />} */}
+        {settings.hideOtherPlayers ? <></> : <OtherPlayers />}
         {settings.hideCubes ? <></> : <Cubes activeTextureREF={activeTextureREF} REF_ALLCUBES={REF_ALLCUBES} updateInitStatus={updateInitStatus} addonechunkmade={addonechunkmade} initStatus={initStatus} chunksmadecounter={chunksmadecounter}/>}
   
         {/* <Effects>
-                  <renderPixelatedPass args={[resolution, 6, scene, camera, { normalEdgeStrength: 1, depthEdgeStrength: 1 }]} />
-              </Effects> */}
+                <renderPixelatedPass args={[resolution, 6, scene, camera, { normalEdgeStrength: 1, depthEdgeStrength: 1 }]} />
+            </Effects> */}
       </>
     );
   }
