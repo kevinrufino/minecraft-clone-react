@@ -38,6 +38,7 @@ export const DrawCubesGeo = ({ info, clickCubeFace }) => {
 
   useEffect(() => {
     //this is neccessary so that after theMeshRef is set, rigid bodies can be placed
+      //future edit: may be unessary due to new physics strategy
     if (theMeshRef.current) {
       if (!readyForRigidBody) {
         setReadyForRigidBody(true);

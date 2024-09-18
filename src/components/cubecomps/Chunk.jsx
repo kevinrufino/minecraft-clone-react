@@ -23,11 +23,8 @@ export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,cubeFac
       mouse.x = (.5) * 2 - 1;
       mouse.y = -(.5) * 2 + 1;
     }
-    // mouse.x = e.clientX
-    // mouse.y = -e.clientY;
+
     raycaster.setFromCamera(mouse, camera);
-    // console.log({x:mouse.x,y:mouse.y,cx:e.clientX,cy:e.clientY,wx:window.innerWidth,wy:window.innerHeight });
-    // reycaster.setFromCamera()
 
     let intersect = raycaster.intersectObjects(scene.children);
 
@@ -45,7 +42,6 @@ export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,cubeFac
 
       if (e.which === 1) {
         console.log("click 1 :", { f_Index });
-        // console.log("cfir:", cubeFaceIndexesREF.current[chunkNum]);
         let newblock = cubeFaceIndexesREF.current[chunkNum][f_Index].add;
         currBlocks[newblock.key] = { pos: newblock.pos, texture: currTexture };
         chunkProps.current[chunkNum].keys.push(newblock.key);
@@ -68,10 +64,6 @@ export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,cubeFac
   }
 
   useFrame(() => {
-    // if(chunkNum==0){
-    //   // console.log(chunkProps.current[0])
-    //   // console.log(chunkTrackBlockCount)
-    // }
     if (chunkProps.current[chunkNum].count != chunkTrackBlockCount.current) {
       chunkTrackBlockCount.current = chunkProps.current[chunkNum].count;
       if (firstPass.current) {

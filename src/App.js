@@ -1,4 +1,4 @@
-import { Debug, Physics } from "@react-three/cannon";
+import { Physics } from "@react-three/cannon";
 import { Sky } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { FPV } from "./components/FPV";
@@ -13,12 +13,10 @@ import settings from "./devOnline";
 import { OrbitControls } from "@react-three/drei";
 import { MakeOnlineConnection } from "./components/multiplayercomps/MakeOnlineConnection";
 import { LoadingWorldPage } from "./components/LoadingWorldPage";
-import JoyStick from "./hooks/Joystick";
 import LowerControlStrip from "./hooks/LowerControlStrip";
 import TitleConfig from "./components/TitleConfig";
 
 function App() {
-  // console.log("-------- rerender App");
   const movewithJOY_BOOL = true
   const [establishedConn] = useStore((state) => [state.establishedConn]);
   const activeTextureREF = useRef("dirt");
@@ -70,15 +68,12 @@ function App() {
 
   function playerGivenGameSettings(obj){
     console.log('from player given game settings')
+    settings.movewithJOY_BOOL=obj.movewithJOY_BOOL
     setPCR(true)
-
-    
   }
 
   function goToGame() {
     if(playerConfigReady){
-    // if(true){
-
       return (
         <>
           <LoadingWorldPage buildWorkers={initStatus.buildWorkers} chunksmadecounter={chunksmadecounter} myRef={loadingscreenhtml} />
@@ -88,7 +83,6 @@ function App() {
 
   
             <Physics>
-              {/* <Debug color="red" scale={1}  > */}
               <Scene
                 activeTextureREF={activeTextureREF}
                 updateInitStatus={updateInitStatus}
@@ -97,7 +91,6 @@ function App() {
                 moveBools={moveBools}
                 movewithJOY_BOOL={movewithJOY_BOOL}
               />
-              {/* </Debug> */}
             </Physics>
   
             {settings.useOrbitals ? <OrbitControls /> : <></>}
@@ -126,13 +119,7 @@ function App() {
     }
   }
 
-
-  function testor() {
-    return(<></>)
-  }
-
   return establishedConn ? goToGame() : gettingWorldLoadScreen();
-  // return testor();
 }
 
 export default App;

@@ -12,12 +12,9 @@ import { useRef } from "react";
 extend({ RenderPixelatedPass });
 
 export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, initStatus,chunksmadecounter,moveBools}) => {
-  // console.log("----this is scene");
   const { size, scene, camera } = useThree();
   const resolution = useMemo(() => new THREE.Vector2(size.width, size.height), [size]);
   const REF_ALLCUBES = useRef({ "0.0.0": { pos: [0, 0, 0], texture: "log" } });
-  // const [playerStartPosReady,setPSPR] = useState(false)
-  // const playerStartPos = useRef([0,0,0])
   const [playerStartPos,setPSP] = useState([0,0,0])
   const [allSet,setAS]=useState(false)
 
@@ -26,9 +23,6 @@ export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, init
     let sp = settings.startingPositionDefault
     let ws = settings.worldSettings.worldSize
     let cs = settings.worldSettings.chunkSize
-
-    // if(playerStartPos[0]==0){
-    // if(!playerStartPosReady){
       if(settings.randomizeStartPos){
         let fulllength = settings.worldSettings.chunkSize * settings.worldSettings.worldSize
         let worldCenter = [fulllength/2,settings.startingPositionDefault[1],fulllength/2]
@@ -38,20 +32,11 @@ export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, init
         sp = worldCenter
         settings.startingChunk = ws * Math.floor(sp[0] / cs) + Math.floor(sp[2] / cs);
       }
-      // console.log('sp',sp)
-
-    // }
-    // playerStartPos.current=sp
-
-
 
     setPSP(sp)
-
-
   }
 
   useEffect(()=>{
-    // console.log({allSet})
     if(playerStartPos[0]==0){
       setupPlayerStartingPosition()
     }
@@ -65,13 +50,12 @@ export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, init
     return (
       <>
         {settings.hidePlayer ? <></> : <Player moveBools={moveBools}  playerStartingPostion={playerStartPos} />}
-        {/* {settings.hidePlayer ? <></> : <Player moveBools={moveBools} />} */}
-        {/* {settings.hideOtherPlayers ? <></> : <OtherPlayers />} */}
+        {settings.hideOtherPlayers ? <></> : <OtherPlayers />}
         {settings.hideCubes ? <></> : <Cubes activeTextureREF={activeTextureREF} REF_ALLCUBES={REF_ALLCUBES} updateInitStatus={updateInitStatus} addonechunkmade={addonechunkmade} initStatus={initStatus} chunksmadecounter={chunksmadecounter}/>}
   
         {/* <Effects>
-                  <renderPixelatedPass args={[resolution, 6, scene, camera, { normalEdgeStrength: 1, depthEdgeStrength: 1 }]} />
-              </Effects> */}
+                <renderPixelatedPass args={[resolution, 6, scene, camera, { normalEdgeStrength: 1, depthEdgeStrength: 1 }]} />
+            </Effects> */}
       </>
     );
   }
