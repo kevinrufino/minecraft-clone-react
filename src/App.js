@@ -18,7 +18,7 @@ import TitleConfig from "./components/TitleConfig";
 
 function App() {
   const movewithJOY_BOOL = true
-  const [establishedConn] = useStore((state) => [state.establishedConn]);
+  const [establishedConn] = useStore((state) => [state.establishedConn]); //begining of online play
   const activeTextureREF = useRef("dirt");
 
   const [playerConfigReady,setPCR] = useState(false)
