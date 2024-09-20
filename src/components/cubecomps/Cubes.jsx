@@ -21,7 +21,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
   const lastRenderChunk = useRef(settings.startingChunk)
 
   //used to keep track of what to add or remove when a face is clicked
-  const cubeFaceIndexesREFlist = useRef(new Array(worldSettings.worldSize ** 2).fill({}));
+  // const cubeFaceIndexesREFlist = useRef(new Array(worldSettings.worldSize ** 2).fill({}));
   const chunks = useRef(
     new Array(worldSettings.worldSize ** 2).fill().map(() => {
       return new Object({ count: 0, draw: { cc: 0, rere: false } });
@@ -78,13 +78,13 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
   }
 
-  function handleWorkerUserChangeResponse(data) {
+  function handleWorkerUserChangeResponse(id,data) {
     let { vertices, uvs, normals, faceIndexMap, count, chunkNumber } = data;
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
     normals = new Float32Array(normals);
-    cubeFaceIndexesREFlist.current[chunkNumber] = faceIndexMap;
-
+    // cubeFaceIndexesREFlist.current[chunkNumber] = faceIndexMap;
+    console.log({chunks,chunkNumber,data})
     chunks.current[chunkNumber].draw = { cc: count, vertices, uvs, normals, rere: true };
     // worker.terminate(); //use to kill the workers // unsure if we ever have too
   }
@@ -93,17 +93,19 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
 
     worldFiller.chunkNumbers.forEach((cn) => {
       chunks.current[cn] = worldFiller.testor[cn];
-      cubeFaceIndexesREFlist.current[cn] = worldFiller.testor[cn].faceIndexMap;
+      // cubeFaceIndexesREFlist.current[cn] = worldFiller.testor[cn].faceIndexMap;
     });
     if (workerPendingJob.current.length == 0) {
       chunksmadecounter.current.loaddone = true;
-      chunksmadecounter.current.ref.updateDisplay()
+      if(chunksmadecounter.current.ref){
+        chunksmadecounter.current.ref.updateDisplay()
+      }
       setFillerLoadDone(true);
     }
   }
 
   function giveWorkerUserChangeJob(workerId, chunkinfo) {
-    let chunkNumber = chunkinfo.chunkNumber;
+    let chunkNumber = chunkinfo;
     let t = 0.5;
     let adjacentchunks = getListOfNearByChunksById(chunkNumber, 1);
     let neededblocks = {};
@@ -113,8 +115,9 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
       });
     });
     let blocks = neededblocks;
+    console.log("giveWorkerUserChangeJob",{chunkNumber})
     let chunkBlocks = chunks.current[chunkNumber];
-    workerList.current[workerId].postMessage({ t, blocks, chunkBlocks, chunkNumber });
+    workerList.current[workerId].postMessage({userChange:{ t, blocks, chunkBlocks, chunkNumber }});
   }
   function giveWorkerWorldFillJob(workerId, chunkinfo) {
     workerList.current[workerId].postMessage({ worldFill: chunkinfo.arr });
@@ -123,6 +126,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
   //this function is for worker job management
   //if there is a new job give it to an open worker if not Q it up
   function addWorkerJob(chunkinfo, type) {
+    console.log("Adding worker job: ",{chunkinfo,type})
     let taken = false; //worker took new job
     for (let i = 0; i < workerList.current.length; i++) {
       if (!workerWorking.current[i] && !taken) {
@@ -175,10 +179,10 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     let wS = worldSettings.worldSize;
     let cS = worldSettings.chunkSize;
     let pChunk = wS * Math.floor(px / cS) + Math.floor(pz / cS);
+    console.log({pChunk,px,pz,wS,cS})
 
     if (playerChunkPosition.current != pChunk && chunksmadecounter.current.loaddone && FillerLoadDoneValue) {
       playerChunkPosition.current = pChunk;
-      console.log({pChunk})
       if(calcDistBetweenChunksFromIds(lastRenderChunk.current,pChunk)>=(renderDistPrecentage*(outerViewRadius-viewRadius))){
         checkWorldFilledRadius(pChunk);
       }
@@ -226,6 +230,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
         let chunkinfo = {
           arr: worldFillarr.slice(fillBatchSize * i, fillBatchSize * (i + 1)),
         };
+        console.log({chunkinfo})
         addWorkerJob(chunkinfo, "worldFill");
       }
     }
@@ -309,7 +314,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
               chunkNum={ind}
               chunkProps={chunks}
               activeTextureREF={activeTextureREF}
-              cubeFaceIndexesREF={cubeFaceIndexesREFlist}
+              // cubeFaceIndexesREF={cubeFaceIndexesREFlist}
               REF_ALLCUBES={REF_ALLCUBES}
               addWorkerJob={addWorkerJob}
             />

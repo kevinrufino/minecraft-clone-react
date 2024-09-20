@@ -5,12 +5,16 @@ import { useRef } from "react";
 import { useState } from "react";
 import settings from "../../devOnline";
 
-export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,cubeFaceIndexesREF,addWorkerJob}) => {
+export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,addWorkerJob}) => {
   const { camera, scene } = useThree();
   const chunkTrackBlockCount = useRef(0);
   const chunkTrackVisibility = useRef(false);
   const [updateChunk, setUpdateChunk] = useState(false);
   let firstPass = useRef(true);
+
+  function makeKey(x, y, z) {
+    return x + "." + y + "." + z;
+  }
 
   function clickCubeFace(e) {
     e.stopPropagation();
@@ -34,6 +38,22 @@ export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,cubeFac
 
     if (intersect.length > 0) {
       let currBlocks = REF_ALLCUBES.current;
+      
+      
+      
+      
+      console.log({intersect})
+      console.log({here:String([...intersect[0].point])})
+      let faceNormal=[intersect[0].face.normal.x,intersect[0].face.normal.y,intersect[0].face.normal.z]
+      let contactBlock = [...intersect[0].point].map((val,ind)=>{
+        return Math.round(val+.000002*faceNormal[ind]*-1)
+      })
+
+      // let blockToAdd=[...intersect[0].point].map(val=>Math.round(val+.00002))
+      // let blockToRemove=[blockToAdd[0]-faceNormal.x,blockToAdd[1]-faceNormal.y,blockToAdd[2]-faceNormal.z]
+      // console.log({add:String(blockToAdd),rem:String(blockToRemove)})
+
+
 
       let f_Index = intersect[0].faceIndex;
       f_Index = f_Index - (f_Index % 2);
@@ -42,16 +62,27 @@ export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,cubeFac
 
       if (e.which === 1) {
         console.log("click 1 :", { f_Index });
-        let newblock = cubeFaceIndexesREF.current[chunkNum][f_Index].add;
+        // let newblock = cubeFaceIndexesREF.current[chunkNum][f_Index].add;
+        let blockToAdd = contactBlock.map((val,ind)=>{
+          return val+faceNormal[ind]
+        })
+        let newblock = {
+          key:makeKey(...blockToAdd),
+          pos:blockToAdd
+        }
+        console.log({newblock,currTexture})
         currBlocks[newblock.key] = { pos: newblock.pos, texture: currTexture };
         chunkProps.current[chunkNum].keys.push(newblock.key);
         chunkProps.current[chunkNum].count++;
+        console.log({currBlocks})
         REF_ALLCUBES.current = currBlocks;
       }
 
       if (e.which === 3) {
         console.log("click 3 :", { f_Index });
-        let remove = cubeFaceIndexesREF.current[chunkNum][f_Index].remove;
+        // let remove = cubeFaceIndexesREF.current[chunkNum][f_Index].remove;
+        let remove = makeKey(...contactBlock)
+        console.log({remove})
         delete currBlocks[remove];
         REF_ALLCUBES.current = currBlocks;
         let r_index = chunkProps.current[chunkNum].keys.indexOf(remove);
@@ -65,11 +96,14 @@ export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,cubeFac
 
   useFrame(() => {
     if (chunkProps.current[chunkNum].count != chunkTrackBlockCount.current) {
+      console.log(`chunknum:${chunkNum} - totalcubes:${chunkProps.current[chunkNum].count} `)
       chunkTrackBlockCount.current = chunkProps.current[chunkNum].count;
       if (firstPass.current) {
+        console.log("first pass")
         firstPass.current = false;
       } else {
-        addWorkerJob(chunkNum);
+        console.log("adding worker job")
+        addWorkerJob(chunkNum, "user");
       }
     }
     if (chunkProps.current[chunkNum].draw.rere) {
