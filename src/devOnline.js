@@ -18,6 +18,8 @@ const settings= {
     hideTextSelect: true,
     hideUIContent:true,
 
+    showLoadingWorldBanner: false,
+
     viewRadius:5,//this number is distance from current place chunks are allowed to be shown
     outerViewRadius:16,//this number is the distance from current place we insure are built/ready to be shown
     renderDistPrecentage: 50/100,

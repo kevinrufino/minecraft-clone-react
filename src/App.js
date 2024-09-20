@@ -76,7 +76,10 @@ function App() {
     if(playerConfigReady){
       return (
         <>
+          {
+          settings.showLoadingWorldBanner ? <></> : 
           <LoadingWorldPage buildWorkers={initStatus.buildWorkers} chunksmadecounter={chunksmadecounter} myRef={loadingscreenhtml} />
+          }
           <Canvas>
             {settings.hideSky ? <></> : <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
             <ambientLight intensity={0.5} />
