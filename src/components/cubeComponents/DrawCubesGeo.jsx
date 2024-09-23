@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRef } from "react";
 import * as textures from "../../images/textures";
-import settings from "../../devOnline";
+import settings from "../../constants";
 import { DrawCubesRB } from "./DrawCubesRB";
 
 export const DrawCubesGeo = ({ info, clickCubeFace }) => {

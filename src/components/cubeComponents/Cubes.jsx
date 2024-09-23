@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Chunk } from "./Chunk";
 import { useFrame, useThree } from "@react-three/fiber";
-import settings from "../../devOnline";
+import settings from "../../constants";
 
 export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initStatus, chunksmadecounter }) => {
   const { camera } = useThree();

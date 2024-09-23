@@ -1,4 +1,5 @@
-const TitleConfig = ({playerGivenGameSettings}) => {
+const TitleScreen = ({playerGivenGameSettings}) => {
+  //@TODO: so this click basically updates the the settings and checks if player is playing on mobile? We can move this into a hook and refactor the play with bool logic for a cleaner setup
   function handleClickPlay() {
     console.log("FromClickingPlay:",{width:window.innerWidth});
     let settingChanges={}
@@ -53,4 +54,4 @@ const TitleConfig = ({playerGivenGameSettings}) => {
   );
 };
 
-export default TitleConfig;
+export default TitleScreen;

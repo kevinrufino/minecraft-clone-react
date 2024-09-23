@@ -1,12 +1,11 @@
-import { Effects } from "@react-three/drei";
 import { useThree, extend, useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useState } from "react";
 import { RenderPixelatedPass } from "three-stdlib";
 import * as THREE from "three";
-import { Player } from "./Player";
-import { OtherPlayers } from "./OtherPlayers";
-import settings from "../devOnline";
-import { Cubes } from "./cubecomps/Cubes";
+import { Player } from "./playerComponents/Player";
+import { OtherPlayers } from "./playerComponents/OtherPlayers";
+import settings from "../constants";
+import { Cubes } from "./cubeComponents/Cubes";
 import { useRef } from "react";
 
 extend({ RenderPixelatedPass });
@@ -52,10 +51,6 @@ export const Scene = ({ activeTextureREF, updateInitStatus,addonechunkmade, init
         {settings.hidePlayer ? <></> : <Player moveBools={moveBools}  playerStartingPostion={playerStartPos} />}
         {settings.hideOtherPlayers ? <></> : <OtherPlayers />}
         {settings.hideCubes ? <></> : <Cubes activeTextureREF={activeTextureREF} REF_ALLCUBES={REF_ALLCUBES} updateInitStatus={updateInitStatus} addonechunkmade={addonechunkmade} initStatus={initStatus} chunksmadecounter={chunksmadecounter}/>}
-  
-        {/* <Effects>
-                <renderPixelatedPass args={[resolution, 6, scene, camera, { normalEdgeStrength: 1, depthEdgeStrength: 1 }]} />
-            </Effects> */}
       </>
     );
   }

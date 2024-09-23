@@ -1,5 +1,5 @@
-import { useStore } from "../hooks/useStore"
-import settings from "../devOnline"
+import { useStore } from "../../hooks/useStore"
+import settings from "../../constants"
 
 export const Menu = () => {
 	const [saveWorld, resetWorld,online_resetWorld] = useStore((state) => [state.saveWorld, state.resetWorld, state.online_resetWorld])
@@ -9,7 +9,7 @@ export const Menu = () => {
             Save
         </button>
 		<button	onClick={() => 
-			settings.online?online_resetWorld():resetWorld()
+			settings.onlineEnabled ? online_resetWorld() : resetWorld()
 		}>
             Reset
         </button>

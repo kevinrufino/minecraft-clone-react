@@ -1,13 +1,13 @@
 
 
 const settings= {
-    online: false,
-    herokuserver: false,
-    useOrbitals:false,
+    onlineEnabled: false,
+    herokuServer: false,
+    orbitalControlsEnabled:false,
 
     hidePlayer: false,
     hideOtherPlayers: false,
-    ignoreCameraFollowPlayer: false,
+    ignoreCameraFollowPlayer: false, //@TODO: rename
     movewithJOY_BOOL: false, // laptop default
 
     hideSky: true,
@@ -15,11 +15,11 @@ const settings= {
     hideCubes:false,
     hideCubeRigidBodyLines: true, //doesn't work yet
     ignoreCubeRigidBody: true,
-    hideTextSelect: true,
+    hideTextureSelector: true,
     hideUIContent:true,
 
     viewRadius:16,//this number is distance from current place chunks are allowed to be shown
-    outerViewRadius:32,//this number is the distance from current place we insure are built/ready to be shown
+    outerViewRadius:20,//this number is the distance from current place we insure are built/ready to be shown
     renderDistPrecentage: 50/100,
     fillBatchSize:10,
     workerCount:3,
@@ -38,7 +38,7 @@ const settings= {
         seed: "robo",
         worldSize: 100, //this squared is the number of chunks in the world
         chunkSize: 16, //this squared is the number of blocks in each chunk
-        heightFactor: 100, //how high up noise can make hills
+        heightFactor: 10, //how high up noise can make hills
         depth: 0, // how far down blocks are stacked
       }
 
@@ -54,9 +54,9 @@ export default settings
 /* Default settings -- we need this but i havent been updating this as i went.
 
 
-online: false,
-herokuserver: false,
-useOrbitals:false,
+onlineEnabled: false,
+herokuServer: false,
+orbitalControlsEnabled:false,
 
 hidePlayer: false,
 hideOtherPlayers: true,
