@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalmovement, givenWidth, givenHeight})=>{
 
-    let joycanva  = useRef()
+    let joystickCanvasRef = useRef()
     let info = useRef({
         origx:startx,
         origy:starty,
@@ -17,12 +17,12 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
     })
 
     useEffect(()=>{
-        if(joycanva.current){
-            info.current.elepos=joycanva.current.getBoundingClientRect()
-            let can = joycanva.current
-            can.addEventListener("touchstart",mousedown)
-            can.addEventListener("touchend",mouseup)
-            can.addEventListener("touchmove",mousemove)
+        if(joystickCanvasRef.current){
+            info.current.elepos=joystickCanvasRef.current.getBoundingClientRect()
+            let canvas = joystickCanvasRef.current
+            canvas.addEventListener("touchstart",mousedown)
+            canvas.addEventListener("touchend",mouseup)
+            canvas.addEventListener("touchmove",mousemove)
             filldraw()
         }
         moveBools.current.moveQuickTT = new Date().getTime()
@@ -171,7 +171,7 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
     }
 
     function filldraw(){
-        let canvas = joycanva.current
+        let canvas = joystickCanvasRef.current
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0,0,canvas.width,canvas.height)
         ctx.beginPath();
@@ -204,7 +204,7 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
     }
 
 
-    return(<canvas id={myId} ref={joycanva} width={startx*2} height={starty*2} className="joystick"  ></canvas>)
+    return(<canvas id={myId} ref={joystickCanvasRef} width={startx*2} height={starty*2} className="joystick"  ></canvas>)
 }
 
 

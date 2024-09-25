@@ -2,10 +2,10 @@ import { useSphere } from "@react-three/cannon";
 import { useFrame, useThree } from "@react-three/fiber"
 import { useEffect, useRef } from "react";
 import { Vector3, Euler } from "three";
-import settings from "../devOnline";
-import { useKeyboard } from "../hooks/useKeyboard";
-import { useStore } from "../hooks/useStore";
-import { FPV } from "./FPV";
+import settings from "../../constants";
+import { useKeyboard } from "../../hooks/useKeyboard";
+import { useStore } from "../../hooks/useStore";
+import { FPV } from "./controls/FPV";
 
 const JUMP_HIEGHT = 8;
 const SPEED = 4;
@@ -123,7 +123,7 @@ export const Player = ({myradius = .5,moveBools, playerStartingPostion}) => {
 
     // meant to help give the server a players location so other players can see where said player is
     function doOnlinePlayerPos(){
-        if(settings.online){
+        if(settings.onlineEnabled){
             if(socket.connected){
                     online_sendPos(pos.current)
             }

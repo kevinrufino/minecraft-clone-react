@@ -1,11 +1,14 @@
 import { useEffect } from "react";
-import settings from "../../devOnline";
+import settings from "../../constants";
 import { useStore } from "../../hooks/useStore";
 import io from "socket.io-client";
 
-const ENDPOINT = settings.herokuserver ? "https://ghk-cpminecraft.herokuapp.com/" : "http://localhost:5000";
-// const ENDPOINT = settings.herokuserver?'https://ghk-reactminecraftcloneserver.onrender.com':"http://localhost:5000"
+const ENDPOINT = settings.herokuServer
+  ? "https://ghk-cpminecraft.herokuapp.com/"
+  : "http://localhost:5000";
+// const ENDPOINT = settings.herokuServer?'https://ghk-reactminecraftcloneserver.onrender.com':"http://localhost:5000"
 
+//@TODO: this should be a hook since we're only using hooks in it.
 export const MakeOnlineConnection = () => {
   const [
     establishedConn,
@@ -28,7 +31,7 @@ export const MakeOnlineConnection = () => {
   ]);
 
   useEffect(() => {
-    if (settings.online) {
+    if (settings.onlineEnabled) {
       if (socket) {
         socket.on("S_GiveWorld", (world) => {
           online_updateCubes(world.cubes);
@@ -45,14 +48,14 @@ export const MakeOnlineConnection = () => {
       }
     }
 
-    if (!settings.online && !establishedConn) {
+    if (!settings.onlineEnabled && !establishedConn) {
       online_SetEstablishedConn(true);
     }
   }, [socket]);
 
   //making connection
   useEffect(() => {
-    if (settings.online) {
+    if (settings.onlineEnabled) {
       const connectionOptions = {
         forceNew: true,
         reconnectionAttempts: "5",

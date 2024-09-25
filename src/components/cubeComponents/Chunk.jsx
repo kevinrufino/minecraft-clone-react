@@ -3,7 +3,7 @@ import { FormCubeArrays } from "./FormCubeArrays";
 import * as THREE from "three";
 import { useRef } from "react";
 import { useState } from "react";
-import settings from "../../devOnline";
+import settings from "../../constants";
 
 export const Chunk = ({chunkNum,activeTextureREF,chunkProps,REF_ALLCUBES,cubeFaceIndexesREF,addWorkerJob}) => {
   const { camera, scene } = useThree();
