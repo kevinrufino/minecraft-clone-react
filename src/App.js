@@ -8,7 +8,7 @@ import CoreGame from "./components/CoreGame";
 function App() {
   const [establishedConn] = useStore((state) => [state.establishedConn]); //begining of online play
 
-  const [playerConfigReady,setPCR] = useState(false)
+  const [playerConfigReady, setPCR] = useState(false);
 
   function gettingWorldLoadScreen() {
     //this is meant to be a place holder for a potential loading screen as we generate enough of the world before the player.
@@ -22,13 +22,21 @@ function App() {
     );
   }
 
-  function playerGivenGameSettings(obj){
-    console.log('from player given game settings')
-    settings.movewithJOY_BOOL=obj.movewithJOY_BOOL
-    setPCR(true)
+  function playerGivenGameSettings(obj) {
+    console.log("from player given game settings");
+    settings.movewithJOY_BOOL = obj.movewithJOY_BOOL;
+    setPCR(true);
   }
 
-  return establishedConn ? playerConfigReady ? <CoreGame /> : <TitleScreen playerGivenGameSettings={playerGivenGameSettings}/> : gettingWorldLoadScreen();
+  return establishedConn ? (
+    playerConfigReady ? (
+      <CoreGame />
+    ) : (
+      <TitleScreen playerGivenGameSettings={playerGivenGameSettings} />
+    )
+  ) : (
+    gettingWorldLoadScreen()
+  );
 }
 
 export default App;

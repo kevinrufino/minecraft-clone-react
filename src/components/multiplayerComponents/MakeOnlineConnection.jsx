@@ -3,7 +3,9 @@ import settings from "../../constants";
 import { useStore } from "../../hooks/useStore";
 import io from "socket.io-client";
 
-const ENDPOINT = settings.herokuServer ? "https://ghk-cpminecraft.herokuapp.com/" : "http://localhost:5000";
+const ENDPOINT = settings.herokuServer
+  ? "https://ghk-cpminecraft.herokuapp.com/"
+  : "http://localhost:5000";
 // const ENDPOINT = settings.herokuServer?'https://ghk-reactminecraftcloneserver.onrender.com':"http://localhost:5000"
 
 //@TODO: this should be a hook since we're only using hooks in it.
