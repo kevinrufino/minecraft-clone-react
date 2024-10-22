@@ -45,13 +45,7 @@ const CoreGame = () => {
   });
 
   // @TODO: use this for debugging live, lets update the constants file and other states that we want to tweak live from here
-  const {
-    showUIContent,
-    showTextureSelector,
-    showFPS,
-    showSky,
-    orbitalControlsEnabled,
-  } = useControls({
+  const { showUIContent, showTextureSelector, showFPS, showSky, orbitalControlsEnabled } = useControls({
     // minDistance: { value: 0 },
     testBUtton: button(() => console.log("test button clicked")),
     showUIContent: { value: false, label: "show UI content" },
@@ -66,22 +60,18 @@ const CoreGame = () => {
   function updateInitStatus(obj) {
     setInitStatus({ ...initStatus.current, ...obj });
   }
-
   return (
     <>
-      <LoadingWorldScreen
-        buildWorkers={initStatus.buildWorkers}
-        chunksmadecounter={chunksmadecounter}
-      />
+      {settings.showLoadingWorldBanner ? (
+        <LoadingWorldScreen buildWorkers={initStatus.buildWorkers} chunksmadecounter={chunksmadecounter} />
+      ) : (
+        <></>
+      )}
       <Canvas>
         {showFPS && <Stats />}
         <PerformanceMonitor
-          onIncline={() =>
-            console.log("@TODO: performance is good, lets load more chunks")
-          }
-          onDecline={() =>
-            console.log("@TODO: performance is bad, lets load less chunks")
-          }
+          onIncline={() => console.log("@TODO: performance is good, lets load more chunks")}
+          onDecline={() => console.log("@TODO: performance is bad, lets load less chunks")}
         />
         {showSky && <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
         <ambientLight intensity={0.5} />
@@ -106,12 +96,8 @@ const CoreGame = () => {
           <Help />
         </>
       )}
-      {!settings.ignoreCameraFollowPlayer && (
-        <div className="cursor centered absolute">+</div>
-      )}
-      {showTextureSelector && (
-        <TextureSelector activeTextureREF={activeTextureREF} />
-      )}
+      {!settings.ignoreCameraFollowPlayer && <div className="cursor centered absolute">+</div>}
+      {showTextureSelector && <TextureSelector activeTextureREF={activeTextureREF} />}
     </>
   );
 };
