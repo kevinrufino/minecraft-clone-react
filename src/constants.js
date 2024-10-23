@@ -21,8 +21,8 @@ const settings = {
 
   activeTexture: "AllMinecraftTexture",
 
-  randomizeStartPos: true,
-  startingPositionDefault: [2, 3, 2],
+  randomizeStartPos: false,
+  startingPositionDefault: [2, 30, 2],
   startingRotationDefault: [-45, 220, 0].map((val) => {
     return (val * Math.PI) / 180;
   }),

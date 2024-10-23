@@ -3,7 +3,13 @@ import { Chunk } from "./Chunk";
 import { useFrame, useThree } from "@react-three/fiber";
 import settings from "../../constants";
 
-export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initStatus, chunksmadecounter }) => {
+export const Cubes = ({
+  activeTextureREF,
+  REF_ALLCUBES,
+  updateInitStatus,
+  initStatus,
+  chunksmadecounter,
+}) => {
   const { camera } = useThree();
   const [FillerLoadDoneValue, setFillerLoadDone] = useState(false);
   let viewRadius = settings.viewRadius; //this number is distance from current place chunks are allowed to be shown
@@ -18,12 +24,12 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
   const workerWorking = useRef(new Array(workerCount).fill(true));
   const workerList = useRef(new Array(workerCount).fill(""));
 
-  const lastRenderChunk = useRef(settings.startingChunk)
+  const lastRenderChunk = useRef(settings.startingChunk);
 
   const chunks = useRef(
     new Array(worldSettings.worldSize ** 2).fill().map(() => {
       return new Object({ count: 0, draw: { cc: 0, rere: false } });
-    })
+    }),
   );
   /* 
     example
@@ -49,9 +55,10 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
       if (e.data.regFlow) {
         handleWorkerUserChangeResponse(id, e.data.regFlow);
       } else if (e.data.worldFiller) {
-        chunksmadecounter.current.track.count+=e.data.worldFiller.chunkNumbers.length
-        if(chunksmadecounter.current.ref){
-          chunksmadecounter.current.ref.updateDisplay()
+        chunksmadecounter.current.track.count +=
+          e.data.worldFiller.chunkNumbers.length;
+        if (chunksmadecounter.current.ref) {
+          chunksmadecounter.current.ref.updateDisplay();
         }
         handleWorkerWorldFillResponse(e.data.worldFiller);
       }
@@ -64,24 +71,30 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     return worker;
   };
 
-  function calcChunkXandYFromId(id){
-    let ws = settings.worldSettings.worldSize
+  function calcChunkXandYFromId(id) {
+    let ws = settings.worldSettings.worldSize;
     let y = Math.floor(id / ws);
     let x = id - y * ws;
-    return {x,y}
+    return { x, y };
   }
-  function calcDistBetweenChunksFromIds(l,r){
-    let a = calcChunkXandYFromId(l)
-    let b = calcChunkXandYFromId(r)
+  function calcDistBetweenChunksFromIds(l, r) {
+    let a = calcChunkXandYFromId(l);
+    let b = calcChunkXandYFromId(r);
     return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
   }
 
-  function handleWorkerUserChangeResponse(id,data) {
+  function handleWorkerUserChangeResponse(id, data) {
     let { vertices, uvs, normals, count, chunkNumber } = data;
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
     normals = new Float32Array(normals);
-    chunks.current[chunkNumber].draw = { cc: count, vertices, uvs, normals, rere: true };
+    chunks.current[chunkNumber].draw = {
+      cc: count,
+      vertices,
+      uvs,
+      normals,
+      rere: true,
+    };
     // worker.terminate(); //use to kill the workers // unsure if we ever have too
   }
   function handleWorkerWorldFillResponse(worldFiller) {
@@ -92,8 +105,8 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     });
     if (workerPendingJob.current.length == 0) {
       chunksmadecounter.current.loaddone = true;
-      if(chunksmadecounter.current.ref){
-        chunksmadecounter.current.ref.updateDisplay()
+      if (chunksmadecounter.current.ref) {
+        chunksmadecounter.current.ref.updateDisplay();
       }
       setFillerLoadDone(true);
     }
@@ -111,7 +124,9 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     });
     let blocks = neededblocks;
     let chunkBlocks = chunks.current[chunkNumber];
-    workerList.current[workerId].postMessage({userChange:{ t, blocks, chunkBlocks, chunkNumber }});
+    workerList.current[workerId].postMessage({
+      userChange: { t, blocks, chunkBlocks, chunkNumber },
+    });
   }
   function giveWorkerWorldFillJob(workerId, chunkinfo) {
     workerList.current[workerId].postMessage({ worldFill: chunkinfo.arr });
@@ -135,7 +150,11 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
 
     if (!taken) {
       //no worker took new job so Q it up
-      workerPendingJob.current.push({ chunkinfo, type, pl: jobTypePriority(type) });
+      workerPendingJob.current.push({
+        chunkinfo,
+        type,
+        pl: jobTypePriority(type),
+      });
       workerPendingJob.current.sort((ja, jb) => {
         return ja.pl - jb.pl;
       });
@@ -173,9 +192,18 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     let cS = worldSettings.chunkSize;
     let pChunk = wS * Math.floor(px / cS) + Math.floor(pz / cS);
 
-    if (playerChunkPosition.current != pChunk && chunksmadecounter.current.loaddone && FillerLoadDoneValue) {
+    if (
+      playerChunkPosition.current != pChunk &&
+      chunksmadecounter.current.loaddone &&
+      FillerLoadDoneValue
+    ) {
+      console.log({ pChunk, px, pz, wS, cS });
       playerChunkPosition.current = pChunk;
-      if(calcDistBetweenChunksFromIds(lastRenderChunk.current,pChunk)>=(renderDistPrecentage*(outerViewRadius-viewRadius))){
+      console.log({ pChunk });
+      if (
+        calcDistBetweenChunksFromIds(lastRenderChunk.current, pChunk) >=
+        renderDistPrecentage * (outerViewRadius - viewRadius)
+      ) {
         checkWorldFilledRadius(pChunk);
       }
       updateDisplayedChunks(pChunk);
@@ -196,8 +224,11 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     }
     // triggering world fill once
     if (workerList.current[0] && !chunksmadecounter.current.loaddone) {
-      let ourcurrentchunk = settings.startingChunk
-      let worldFillarr = getListOfNearByChunksById(ourcurrentchunk, outerViewRadius);
+      let ourcurrentchunk = settings.startingChunk;
+      let worldFillarr = getListOfNearByChunksById(
+        ourcurrentchunk,
+        outerViewRadius,
+      );
       let ws = worldSettings.worldSize;
       let worldFillarrsort = worldFillarr.map((val) => {
         let ay = Math.floor(val / ws);
@@ -244,7 +275,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     activeChunks.current = chunksToDisplay;
   }
   function checkWorldFilledRadius(currentChunk) {
-    lastRenderChunk.current = playerChunkPosition.current
+    lastRenderChunk.current = playerChunkPosition.current;
     let chunksTofill = getListOfNearByChunksById(currentChunk, outerViewRadius);
     chunksTofill = chunksTofill.filter((cn) => {
       return !chunks.current[cn].count;
