@@ -19,8 +19,8 @@ const settings = {
 
   activeTexture: "AllMinecraftTexture",
 
-  randomizeStartPos: true,
-  startingPositionDefault: [2, 3, 2],
+  randomizeStartPos: false,
+  startingPositionDefault: [2, 30, 2],
   startingRotationDefault: [-45, 220, 0].map((val) => {
     return (val * Math.PI) / 180;
   }),
@@ -28,10 +28,10 @@ const settings = {
 
   //world set up configs
   worldSettings: {
-    useHeightTextures: true,
+    useHeightTextures: false,
     showFlatWorld: false,
     seed: "robo",
-    worldSize: 100, //this squared is the number of chunks in the world
+    worldSize: 2, //this squared is the number of chunks in the world
     chunkSize: 16, //this squared is the number of blocks in each chunk
     heightFactor: 10, //how high up noise can make hills
     depth: 0, // how far down blocks are stacked
@@ -39,11 +39,7 @@ const settings = {
 };
 settings.startingChunk =
   settings.worldSettings.worldSize *
-    Math.floor(
-      settings.startingPositionDefault[0] / settings.worldSettings.chunkSize,
-    ) +
-  Math.floor(
-    settings.startingPositionDefault[2] / settings.worldSettings.chunkSize,
-  );
+    Math.floor(settings.startingPositionDefault[0] / settings.worldSettings.chunkSize) +
+  Math.floor(settings.startingPositionDefault[2] / settings.worldSettings.chunkSize);
 
 export default settings;

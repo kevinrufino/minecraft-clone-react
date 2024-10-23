@@ -18,7 +18,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
   const workerWorking = useRef(new Array(workerCount).fill(true));
   const workerList = useRef(new Array(workerCount).fill(""));
 
-  const lastRenderChunk = useRef(settings.startingChunk)
+  const lastRenderChunk = useRef(settings.startingChunk);
 
   //used to keep track of what to add or remove when a face is clicked
   const cubeFaceIndexesREFlist = useRef(new Array(worldSettings.worldSize ** 2).fill({}));
@@ -51,9 +51,9 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
       if (e.data.regFlow) {
         handleWorkerUserChangeResponse(id, e.data.regFlow);
       } else if (e.data.worldFiller) {
-        chunksmadecounter.current.track.count+=e.data.worldFiller.chunkNumbers.length
-        if(chunksmadecounter.current.ref){
-          chunksmadecounter.current.ref.updateDisplay()
+        chunksmadecounter.current.track.count += e.data.worldFiller.chunkNumbers.length;
+        if (chunksmadecounter.current.ref) {
+          chunksmadecounter.current.ref.updateDisplay();
         }
         handleWorkerWorldFillResponse(e.data.worldFiller);
       }
@@ -66,15 +66,15 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     return worker;
   };
 
-  function calcChunkXandYFromId(id){
-    let ws = settings.worldSettings.worldSize
+  function calcChunkXandYFromId(id) {
+    let ws = settings.worldSettings.worldSize;
     let y = Math.floor(id / ws);
     let x = id - y * ws;
-    return {x,y}
+    return { x, y };
   }
-  function calcDistBetweenChunksFromIds(l,r){
-    let a = calcChunkXandYFromId(l)
-    let b = calcChunkXandYFromId(r)
+  function calcDistBetweenChunksFromIds(l, r) {
+    let a = calcChunkXandYFromId(l);
+    let b = calcChunkXandYFromId(r);
     return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
   }
 
@@ -83,8 +83,8 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
     normals = new Float32Array(normals);
-    cubeFaceIndexesREFlist.current[chunkNumber] = faceIndexMap;
-
+    // cubeFaceIndexesREFlist.current[chunkNumber] = faceIndexMap;
+    // console.log({chunks,chunkNumber,data})
     chunks.current[chunkNumber].draw = { cc: count, vertices, uvs, normals, rere: true };
     // worker.terminate(); //use to kill the workers // unsure if we ever have too
   }
@@ -97,7 +97,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     });
     if (workerPendingJob.current.length == 0) {
       chunksmadecounter.current.loaddone = true;
-      chunksmadecounter.current.ref.updateDisplay()
+      chunksmadecounter.current.ref.updateDisplay();
       setFillerLoadDone(true);
     }
   }
@@ -177,9 +177,13 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     let pChunk = wS * Math.floor(px / cS) + Math.floor(pz / cS);
 
     if (playerChunkPosition.current != pChunk && chunksmadecounter.current.loaddone && FillerLoadDoneValue) {
+      console.log({ pChunk, px, pz, wS, cS });
       playerChunkPosition.current = pChunk;
-      console.log({pChunk})
-      if(calcDistBetweenChunksFromIds(lastRenderChunk.current,pChunk)>=(renderDistPrecentage*(outerViewRadius-viewRadius))){
+      console.log({ pChunk });
+      if (
+        calcDistBetweenChunksFromIds(lastRenderChunk.current, pChunk) >=
+        renderDistPrecentage * (outerViewRadius - viewRadius)
+      ) {
         checkWorldFilledRadius(pChunk);
       }
       updateDisplayedChunks(pChunk);
@@ -200,7 +204,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     }
     // triggering world fill once
     if (workerList.current[0] && !chunksmadecounter.current.loaddone) {
-      let ourcurrentchunk = settings.startingChunk
+      let ourcurrentchunk = settings.startingChunk;
       let worldFillarr = getListOfNearByChunksById(ourcurrentchunk, outerViewRadius);
       let ws = worldSettings.worldSize;
       let worldFillarrsort = worldFillarr.map((val) => {
@@ -248,7 +252,7 @@ export const Cubes = ({ activeTextureREF, REF_ALLCUBES, updateInitStatus, initSt
     activeChunks.current = chunksToDisplay;
   }
   function checkWorldFilledRadius(currentChunk) {
-    lastRenderChunk.current = playerChunkPosition.current
+    lastRenderChunk.current = playerChunkPosition.current;
     let chunksTofill = getListOfNearByChunksById(currentChunk, outerViewRadius);
     chunksTofill = chunksTofill.filter((cn) => {
       return !chunks.current[cn].count;
