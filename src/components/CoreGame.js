@@ -34,7 +34,7 @@ const CoreGame = () => {
     camCenterTC: 0,
   });
   const activeTextureREF = useRef("dirt");
-  const chunksmadecounter = useRef({
+  const chunksMadeCounter = useRef({
     loaddone: false,
     track: { count: 0, max: settings.worldSettings.worldSize ** 2 },
   });
@@ -71,7 +71,7 @@ const CoreGame = () => {
       {settings.showLoadingWorldBanner ? (
         <LoadingWorldScreen
           buildWorkers={initStatus.buildWorkers}
-          chunksmadecounter={chunksmadecounter}
+          chunksMadeCounter={chunksMadeCounter}
         />
       ) : (
         <></>
@@ -93,7 +93,7 @@ const CoreGame = () => {
             activeTextureREF={activeTextureREF}
             updateInitStatus={updateInitStatus}
             initStatus={initStatus}
-            chunksmadecounter={chunksmadecounter}
+            chunksMadeCounter={chunksMadeCounter}
             moveBools={moveBools}
             movewithJOY_BOOL={movewithJOY_BOOL}
           />
