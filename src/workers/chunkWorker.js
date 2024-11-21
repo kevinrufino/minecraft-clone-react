@@ -174,7 +174,7 @@ function initialFill(chunkNumbers) {
     // let cS = worldSet.chunkSize;
     // let ws = worldSet.worldSize;
     let cnX = Math.floor(chunkNumber / wS);
-    let cnZ = (chunkNumber / wS - cnX) * wS;
+    let cnZ = chunkNumber % wS;
     const noise2D = worldSet["genNoise2D"];
     let info = {};
     let infoList = [];
