@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 function actionByKey(key) {
   const keyActionMap = {
@@ -82,7 +82,6 @@ export const useKeyboard = () => {
     },
   });
   const handleKeyDown = (e) => {
-    // console.log({keydownseen:e.code})
     let action = actionByKey(e.code);
     if (action && !actions.current[action].on) {
       let actionObj = actions.current[action];
@@ -90,7 +89,10 @@ export const useKeyboard = () => {
       // repeat checker
       console.log("Repeate Checker down");
       let newpress = new Date().getTime();
-      console.log({ diff: newpress - actionObj.lastPress, count: actionObj.count });
+      console.log({
+        diff: newpress - actionObj.lastPress,
+        count: actionObj.count,
+      });
       if (newpress - actionObj.lastPress > 500) {
         actionObj.count = 0;
       }

@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
-export const LoadingWorldScreen = ({ buildWorkers, chunksmadecounter }) => {
+export const LoadingWorldScreen = ({ buildWorkers, chunksMadeCounter }) => {
   const [timeSoFar, setTSF] = useState(0);
   const loadingScreenHtmlRef = useRef();
 
   useEffect(() => {
-    if (!chunksmadecounter.current.loaddone) {
+    if (!chunksMadeCounter.current.loaddone) {
       setTimeout(() => setTSF(timeSoFar + 1), 1000);
     }
     if (loadingScreenHtmlRef.current) {
       // console.log(loadingScreenHtmlRef.current.children[0].textContent)
-      chunksmadecounter.current["ref"] = {
+      chunksMadeCounter.current["ref"] = {
         ref: loadingScreenHtmlRef.current,
         updateDisplay: updateDisplay,
       };
@@ -21,9 +21,9 @@ export const LoadingWorldScreen = ({ buildWorkers, chunksmadecounter }) => {
 
   function updateDisplay() {
     loadingScreenHtmlRef.current.children[0].textContent = `load done - ${
-      chunksmadecounter.current.loaddone ? "true" : "false"
-    } -- ${chunksmadecounter.current.track.count}/${
-      chunksmadecounter.current.track.max
+      chunksMadeCounter.current.loaddone ? "true" : "false"
+    } -- ${chunksMadeCounter.current.track.count}/${
+      chunksMadeCounter.current.track.max
     }`;
     // loadingScreenHtmlRef.current.children[1].textContent = ``
     // loadingScreenHtmlRef.current.children[2].textContent = ``

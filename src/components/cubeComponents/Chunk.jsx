@@ -39,13 +39,11 @@ export const Chunk = ({
     let intersect = raycaster.intersectObjects(scene.children);
 
     intersect = intersect.filter((inter) => {
-      return inter.object.name == "cubesMesh2";
+      return inter.object.name === "cubesMesh2";
     });
 
     if (intersect.length > 0) {
       let currBlocks = REF_ALLCUBES.current;
-      // console.log({intersect})
-      // console.log({here:String([...intersect[0].point])})
       let faceNormal = [
         intersect[0].face.normal.x,
         intersect[0].face.normal.y,
@@ -55,17 +53,9 @@ export const Chunk = ({
         return Math.round(val + 0.000002 * faceNormal[ind] * -1);
       });
 
-      // let blockToAdd=[...intersect[0].point].map(val=>Math.round(val+.00002))
-      // let blockToRemove=[blockToAdd[0]-faceNormal.x,blockToAdd[1]-faceNormal.y,blockToAdd[2]-faceNormal.z]
-      // console.log({add:String(blockToAdd),rem:String(blockToRemove)})
-      let f_Index = intersect[0].faceIndex;
-      f_Index = f_Index - (f_Index % 2);
-
       let currTexture = activeTextureREF.current;
 
       if (e.which === 1) {
-        // console.log("click 1 :", { f_Index });
-        // let newblock = cubeFaceIndexesREF.current[chunkNum][f_Index].add;
         let blockToAdd = contactBlock.map((val, ind) => {
           return val + faceNormal[ind];
         });
@@ -73,19 +63,14 @@ export const Chunk = ({
           key: makeKey(...blockToAdd),
           pos: blockToAdd,
         };
-        console.log({ newblcokey: newblock.key, newblock, currTexture });
         currBlocks[newblock.key] = { pos: newblock.pos, texture: currTexture };
         chunkProps.current[chunkNum].keys.push(newblock.key);
         chunkProps.current[chunkNum].count++;
-        // console.log({currBlocks})
         REF_ALLCUBES.current = currBlocks;
       }
 
       if (e.which === 3) {
-        // console.log("click 3 :", { f_Index });
-        // let remove = cubeFaceIndexesREF.current[chunkNum][f_Index].remove;
         let remove = makeKey(...contactBlock);
-        console.log({ remove });
         delete currBlocks[remove];
         REF_ALLCUBES.current = currBlocks;
         let r_index = chunkProps.current[chunkNum].keys.indexOf(remove);
@@ -104,14 +89,11 @@ export const Chunk = ({
   }
 
   useFrame(() => {
-    if (chunkProps.current[chunkNum].count != chunkTrackBlockCount.current) {
-      // console.log(`chunknum:${chunkNum} - totalcubes:${chunkProps.current[chunkNum].count} `)
+    if (chunkProps.current[chunkNum].count !== chunkTrackBlockCount.current) {
       chunkTrackBlockCount.current = chunkProps.current[chunkNum].count;
       if (firstPass.current) {
-        // console.log("first pass")
         firstPass.current = false;
       } else {
-        // console.log("adding worker job")
         addWorkerJob(chunkNum, "user");
       }
     }
@@ -119,7 +101,7 @@ export const Chunk = ({
       chunkProps.current[chunkNum].draw.rere = false;
       setUpdateChunk(!updateChunk); //triggers a rerender
     }
-    if (chunkProps.current[chunkNum].visible != chunkTrackVisibility.current) {
+    if (chunkProps.current[chunkNum].visible !== chunkTrackVisibility.current) {
       chunkTrackVisibility.current = chunkProps.current[chunkNum].visible;
       setUpdateChunk(!updateChunk);
     }

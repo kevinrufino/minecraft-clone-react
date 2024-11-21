@@ -8,7 +8,7 @@ export const Cubes = ({
   REF_ALLCUBES,
   updateInitStatus,
   initStatus,
-  chunksmadecounter,
+  chunksMadeCounter,
 }) => {
   const { camera } = useThree();
   const [FillerLoadDoneValue, setFillerLoadDone] = useState(false);
@@ -31,6 +31,7 @@ export const Cubes = ({
       return new Object({ count: 0, draw: { cc: 0, rere: false } });
     }),
   );
+
   /* 
     example
     chunks.current is whats  below
@@ -41,6 +42,7 @@ export const Cubes = ({
       }
       ,...] 
   */
+
   const activeChunks = useRef([]);
   const playerChunkPosition = useRef(-1);
 
@@ -53,12 +55,12 @@ export const Cubes = ({
     //responsible for handeling the workers response
     worker.onmessage = (e) => {
       if (e.data.regFlow) {
-        handleWorkerUserChangeResponse(id, e.data.regFlow);
+        handleWorkerUserChangeResponse(e.data.regFlow);
       } else if (e.data.worldFiller) {
-        chunksmadecounter.current.track.count +=
+        chunksMadeCounter.current.track.count +=
           e.data.worldFiller.chunkNumbers.length;
-        if (chunksmadecounter.current.ref) {
-          chunksmadecounter.current.ref.updateDisplay();
+        if (chunksMadeCounter.current.ref) {
+          chunksMadeCounter.current.ref.updateDisplay();
         }
         handleWorkerWorldFillResponse(e.data.worldFiller);
       }
@@ -77,13 +79,14 @@ export const Cubes = ({
     let x = id - y * ws;
     return { x, y };
   }
+
   function calcDistBetweenChunksFromIds(l, r) {
     let a = calcChunkXandYFromId(l);
     let b = calcChunkXandYFromId(r);
     return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
   }
 
-  function handleWorkerUserChangeResponse(id, data) {
+  function handleWorkerUserChangeResponse(data) {
     let { vertices, uvs, normals, count, chunkNumber } = data;
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
@@ -97,6 +100,7 @@ export const Cubes = ({
     };
     // worker.terminate(); //use to kill the workers // unsure if we ever have too
   }
+
   function handleWorkerWorldFillResponse(worldFiller) {
     REF_ALLCUBES.current = { ...REF_ALLCUBES.current, ...worldFiller.ac };
 
@@ -104,9 +108,9 @@ export const Cubes = ({
       chunks.current[cn] = worldFiller.testor[cn];
     });
     if (workerPendingJob.current.length == 0) {
-      chunksmadecounter.current.loaddone = true;
-      if (chunksmadecounter.current.ref) {
-        chunksmadecounter.current.ref.updateDisplay();
+      chunksMadeCounter.current.loaddone = true;
+      if (chunksMadeCounter.current.ref) {
+        chunksMadeCounter.current.ref.updateDisplay();
       }
       setFillerLoadDone(true);
     }
@@ -128,6 +132,7 @@ export const Cubes = ({
       userChange: { t, blocks, chunkBlocks, chunkNumber },
     });
   }
+
   function giveWorkerWorldFillJob(workerId, chunkinfo) {
     workerList.current[workerId].postMessage({ worldFill: chunkinfo.arr });
   }
@@ -140,9 +145,9 @@ export const Cubes = ({
       if (!workerWorking.current[i] && !taken) {
         workerWorking.current[i] = true;
         taken = true;
-        if (type == "worldFill") {
+        if (type === "worldFill") {
           giveWorkerWorldFillJob(i, chunkinfo);
-        } else if (type == "user") {
+        } else if (type === "user") {
           giveWorkerUserChangeJob(i, chunkinfo);
         }
       }
@@ -178,9 +183,9 @@ export const Cubes = ({
   //function executed by workers asking for more work
   function getPendingJob(workernum) {
     let job = workerPendingJob.current.shift();
-    if (job.type == "worldFill") {
+    if (job.type === "worldFill") {
       giveWorkerWorldFillJob(workernum, job.chunkinfo);
-    } else if (job.type == "user") {
+    } else if (job.type === "user") {
       giveWorkerUserChangeJob(workernum, job.chunkinfo);
     }
   }
@@ -193,8 +198,8 @@ export const Cubes = ({
     let pChunk = wS * Math.floor(px / cS) + Math.floor(pz / cS);
 
     if (
-      playerChunkPosition.current != pChunk &&
-      chunksmadecounter.current.loaddone &&
+      playerChunkPosition.current !== pChunk &&
+      chunksMadeCounter.current.loaddone &&
       FillerLoadDoneValue
     ) {
       console.log({ pChunk, px, pz, wS, cS });
@@ -223,18 +228,18 @@ export const Cubes = ({
       updateInitStatus({ ...initStatus, buildWorkers: workersmade });
     }
     // triggering world fill once
-    if (workerList.current[0] && !chunksmadecounter.current.loaddone) {
-      let ourcurrentchunk = settings.startingChunk;
+    if (workerList.current[0] && !chunksMadeCounter.current.loaddone) {
+      let ourCurrentChunk = settings.startingChunk;
       let worldFillarr = getListOfNearByChunksById(
-        ourcurrentchunk,
+        ourCurrentChunk,
         outerViewRadius,
       );
       let ws = worldSettings.worldSize;
       let worldFillarrsort = worldFillarr.map((val) => {
         let ay = Math.floor(val / ws);
         let ax = val - ay * ws;
-        let by = Math.floor(ourcurrentchunk / ws);
-        let bx = ourcurrentchunk - by * ws;
+        let by = Math.floor(ourCurrentChunk / ws);
+        let bx = ourCurrentChunk - by * ws;
         let chunkDist = ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5;
         return { val, dist: chunkDist };
       });
@@ -274,6 +279,7 @@ export const Cubes = ({
     });
     activeChunks.current = chunksToDisplay;
   }
+
   function checkWorldFilledRadius(currentChunk) {
     lastRenderChunk.current = playerChunkPosition.current;
     let chunksTofill = getListOfNearByChunksById(currentChunk, outerViewRadius);
@@ -327,7 +333,7 @@ export const Cubes = ({
   }
 
   function showChunks() {
-    return !chunksmadecounter.current.loaddone
+    return !chunksMadeCounter.current.loaddone
       ? ""
       : chunks.current.map((ele, ind) => {
           return (
