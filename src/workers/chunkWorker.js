@@ -11,11 +11,13 @@ onmessage = (e) => {
     // console.log(`[FROM WORKER-${worldSet.w_ind}] - chunkgroup`,e.data.worldFill)
     initialFill(e.data.worldFill);
   } else if (e.data.userChange) {
-    console.log(`[FROM WORKER-${worldSet.w_ind}] - regular flow start`)
+    console.log(`[FROM WORKER-${worldSet.w_ind}] - regular flow start`);
     regularFlow(e.data.userChange);
   } else {
-    console.log(`[FROM WORKER-${worldSet.w_ind}] -ERROR ERROR UNKNOWN TASK GIVEN`)
-    console.log(`[FROM WORKER-${worldSet.w_ind}] - ${Object.keys(e.data)}`,e)
+    console.log(
+      `[FROM WORKER-${worldSet.w_ind}] -ERROR ERROR UNKNOWN TASK GIVEN`,
+    );
+    console.log(`[FROM WORKER-${worldSet.w_ind}] - ${Object.keys(e.data)}`, e);
   }
 };
 
@@ -29,7 +31,7 @@ function initializeWorker(init) {
 function regularFlow(data) {
   let { t, blocks, chunkBlocks, chunkNumber } = data;
 
-  let [vertices, uvs, normals, faceIndexMap] = genFaceArrays(t, blocks, chunkBlocks);
+  let [vertices, uvs, normals] = genFaceArrays(t, blocks, chunkBlocks);
   vertices = new Float32Array(vertices);
   uvs = new Float32Array(uvs);
   normals = new Float32Array(normals);
@@ -37,12 +39,11 @@ function regularFlow(data) {
     vertices,
     uvs,
     normals,
-    faceIndexMap,
     count: chunkBlocks["count"],
     chunkNumber,
     blocksOfChunk: chunkBlocks,
   };
-  postMessage({regFlow:singleChunkResponse});
+  postMessage({ regFlow: singleChunkResponse });
 }
 
 const AMTmap = {
@@ -62,44 +63,21 @@ function makeKey(x, y, z) {
   return x + "." + y + "." + z;
 }
 
-function makefaceIndexMapObject(cen, nx, ny, nz) {
-  return {
-    remove: cen,
-    add: {
-      key: makeKey(nx, ny, nz),
-      pos: [nx, ny, nz],
-    },
-  };
-}
-
 function genFaceArrays(t, blocks, chunkBlocks) {
   let t2 = 2 * t;
   let vertices = [];
   let uvs = [];
   let normals = [];
-  
+
   let uvSize = 1 / 2 / 2 / 2 / 2;
-  let faceIndexMap = {
-    // 0:{
-      //   remove:'1.0.1',
-      //   add:{
-        //     key: '1.2.1',
-        //     pos: [x, y, z]
-        //   },
-        // }
-      };
-      let facemapcount = 0;
   chunkBlocks.keys.forEach((cen) => {
-    // console.log(`5+++${cen}`)
     let [nx, ny, nz] = cen.split(".");
     let [x, y, z] = blocks[cen].pos;
     let showfaces = [false, false, false, false, false, false];
-    // console.log(`3+++${cen}`)
+
     let currtexture = blocks[cen].texture;
-    // console.log({a1:currtexture,a2:AMTmap,a3:AMTmap[currtexture],a4:blocks[cen]})
     let uvL = (AMTmap[currtexture][0] - 1) * uvSize;
     let uvB = (AMTmap[currtexture][1] - 1) * uvSize;
-    // console.log(`4+++${cen}`)
     let onefaceuv = [
       //uv means UxV meaning (u,v) meaning u is the x cordinate v is the y
       uvL + uvSize,
@@ -140,8 +118,6 @@ function genFaceArrays(t, blocks, chunkBlocks) {
       normals.push(0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1);
       uvs.push(...onefaceuv);
       dbstr = dbstr + "front\n";
-      faceIndexMap[facemapcount] = makefaceIndexMapObject(cen, nx, ny, nz + 1);
-      facemapcount += 2;
     }
     // //back
     if (!blocks[makeKey(nx, ny, nz - t2)]) {
@@ -150,8 +126,6 @@ function genFaceArrays(t, blocks, chunkBlocks) {
       normals.push(0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1);
       uvs.push(...onefaceuv);
       dbstr = dbstr + "back\n";
-      faceIndexMap[facemapcount] = makefaceIndexMapObject(cen, nx, ny, nz - 1);
-      facemapcount += 2;
     }
     // //left
     if (!blocks[makeKey(nx - t2, ny, nz)]) {
@@ -160,8 +134,6 @@ function genFaceArrays(t, blocks, chunkBlocks) {
       normals.push(1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0);
       uvs.push(...onefaceuv);
       dbstr = dbstr + "left\n";
-      faceIndexMap[facemapcount] = makefaceIndexMapObject(cen, nx - 1, ny, nz);
-      facemapcount += 2;
     }
     // //right
     if (!blocks[makeKey(nx + t2, ny, nz)]) {
@@ -170,8 +142,6 @@ function genFaceArrays(t, blocks, chunkBlocks) {
       normals.push(1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0);
       uvs.push(...onefaceuv);
       dbstr = dbstr + "right\n";
-      faceIndexMap[facemapcount] = makefaceIndexMapObject(cen, nx + 1, ny, nz);
-      facemapcount += 2;
     }
     // //top
     if (!blocks[makeKey(nx, ny + t2, nz)]) {
@@ -180,8 +150,6 @@ function genFaceArrays(t, blocks, chunkBlocks) {
       normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
       uvs.push(...onefaceuv);
       dbstr = dbstr + "top\n";
-      faceIndexMap[facemapcount] = makefaceIndexMapObject(cen, nx, ny + 1, nz);
-      facemapcount += 2;
     }
     // //bot
     if (!blocks[makeKey(nx, ny - t2, nz)]) {
@@ -190,14 +158,12 @@ function genFaceArrays(t, blocks, chunkBlocks) {
       normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
       uvs.push(...onefaceuv);
       dbstr = dbstr + "bot\n";
-      faceIndexMap[facemapcount] = makefaceIndexMapObject(cen, nx, ny - 1, nz);
-      facemapcount += 2;
     }
 
     blocks[cen].showface = showfaces;
   });
 
-  return [vertices, uvs, normals, faceIndexMap];
+  return [vertices, uvs, normals];
 }
 
 function initialFill(chunkNumbers) {
@@ -224,14 +190,26 @@ function initialFill(chunkNumbers) {
     for (let x = cS * cnX; x < cS * cnX + cS; x++) {
       for (let y = -1 * Math.abs(depth); y < ys; y++) {
         for (let z = cS * cnZ; z < cS * cnZ + cS; z++) {
-          ty = worldSet.showFlatWorld ? y : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) + y;
+          ty = worldSet.showFlatWorld
+            ? y
+            : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) +
+              y;
 
           key = makeKey(x, ty, z);
           let texture = "";
           if (worldSet["useHeightTextures"]) {
             texture = AMTmapkeys[Math.abs(ty) % difflimit];
-            if(key=="0.-1.0"){
-              console.log({x,y,z,ty,difflimit,math:ty % difflimit,texture,AMTmapkeys})
+            if (key == "0.-1.0") {
+              console.log({
+                x,
+                y,
+                z,
+                ty,
+                difflimit,
+                math: ty % difflimit,
+                texture,
+                AMTmapkeys,
+              });
             }
           } else {
             texture = Math.abs(x - z) < 16 ? "wood" : "grass";
@@ -267,7 +245,7 @@ function initialrendors(fillRes, chunkNumbers) {
       count: fillRes[cn].infoList.length,
     };
 
-    let [vertices, uvs, normals, faceIndexMap] = genFaceArrays(t, blocks, chunkBlocks, cn);
+    let [vertices, uvs, normals] = genFaceArrays(t, blocks, chunkBlocks, cn);
     // console.log(`1---${myind}`)
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
@@ -283,7 +261,6 @@ function initialrendors(fillRes, chunkNumbers) {
         uvs,
         normals,
       },
-      faceIndexMap,
     };
   });
   return [blocks, fillRes];

@@ -66,13 +66,16 @@ const CoreGame = () => {
   function updateInitStatus(obj) {
     setInitStatus({ ...initStatus.current, ...obj });
   }
-
   return (
     <>
-      <LoadingWorldScreen
-        buildWorkers={initStatus.buildWorkers}
-        chunksmadecounter={chunksmadecounter}
-      />
+      {settings.showLoadingWorldBanner ? (
+        <LoadingWorldScreen
+          buildWorkers={initStatus.buildWorkers}
+          chunksmadecounter={chunksmadecounter}
+        />
+      ) : (
+        <></>
+      )}
       <Canvas>
         {showFPS && <Stats />}
         <PerformanceMonitor
