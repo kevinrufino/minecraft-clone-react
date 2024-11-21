@@ -14,7 +14,9 @@ onmessage = (e) => {
     console.log(`[FROM WORKER-${worldSet.w_ind}] - regular flow start`);
     regularFlow(e.data.userChange);
   } else {
-    console.log(`[FROM WORKER-${worldSet.w_ind}] -ERROR ERROR UNKNOWN TASK GIVEN`);
+    console.log(
+      `[FROM WORKER-${worldSet.w_ind}] -ERROR ERROR UNKNOWN TASK GIVEN`,
+    );
     console.log(`[FROM WORKER-${worldSet.w_ind}] - ${Object.keys(e.data)}`, e);
   }
 };
@@ -188,7 +190,10 @@ function initialFill(chunkNumbers) {
     for (let x = cS * cnX; x < cS * cnX + cS; x++) {
       for (let y = -1 * Math.abs(depth); y < ys; y++) {
         for (let z = cS * cnZ; z < cS * cnZ + cS; z++) {
-          ty = worldSet.showFlatWorld ? y : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) + y;
+          ty = worldSet.showFlatWorld
+            ? y
+            : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) +
+              y;
 
           key = makeKey(x, ty, z);
           let texture = "";
