@@ -12,22 +12,22 @@ const ENDPOINT = settings.herokuServer
 export const MakeOnlineConnection = () => {
   const [
     establishedConn,
-    online_SetEstablishedConn,
-    greg_Addsocket,
+    online_setEstablishedConn,
     socket,
+    online_Addsocket,
+    playerNum,
+    online_setPlayerNum,
     online_updateCubes,
-    online_setplayerNum,
     online_setPlayersPos,
-    playernum,
   ] = useStore((state) => [
     state.establishedConn,
-    state.online_SetEstablishedConn,
-    state.online_Addsocket,
+    state.online_setEstablishedConn,
     state.socket,
+    state.online_Addsocket,
+    state.playerNum,
+    state.online_setPlayerNum,
     state.online_updateCubes,
-    state.online_setplayerNum,
     state.online_setPlayersPos,
-    state.playernum,
   ]);
 
   useEffect(() => {
@@ -36,10 +36,10 @@ export const MakeOnlineConnection = () => {
         socket.on("S_GiveWorld", (world) => {
           online_updateCubes(world.cubes);
           online_setPlayersPos(world.players);
-          online_SetEstablishedConn(true);
+          online_setEstablishedConn(true);
         });
         socket.on("S_GiveplayerNum", (pnum) => {
-          online_setplayerNum(pnum);
+          online_setPlayerNum(pnum);
         });
         socket.on("S_HeartBeat", (world) => {
           online_updateCubes(world.cubes);
@@ -49,7 +49,7 @@ export const MakeOnlineConnection = () => {
     }
 
     if (!settings.onlineEnabled && !establishedConn) {
-      online_SetEstablishedConn(true);
+      online_setEstablishedConn(true);
     }
   }, [socket]);
 
@@ -63,13 +63,13 @@ export const MakeOnlineConnection = () => {
         transports: ["websocket"],
       };
       const newSocket = io.connect(ENDPOINT, connectionOptions);
-      greg_Addsocket(newSocket);
+      online_Addsocket(newSocket);
 
       return () => {
-        if (playernum) {
+        if (playerNum) {
           let params = {
             worldname: null,
-            playernum,
+            playerNum,
           };
           if (socket) {
             // if(socket.connected){
