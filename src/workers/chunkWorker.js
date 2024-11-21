@@ -11,11 +11,13 @@ onmessage = (e) => {
     // console.log(`[FROM WORKER-${worldSet.w_ind}] - chunkgroup`,e.data.worldFill)
     initialFill(e.data.worldFill);
   } else if (e.data.userChange) {
-    console.log(`[FROM WORKER-${worldSet.w_ind}] - regular flow start`)
+    console.log(`[FROM WORKER-${worldSet.w_ind}] - regular flow start`);
     regularFlow(e.data.userChange);
   } else {
-    console.log(`[FROM WORKER-${worldSet.w_ind}] -ERROR ERROR UNKNOWN TASK GIVEN`)
-    console.log(`[FROM WORKER-${worldSet.w_ind}] - ${Object.keys(e.data)}`,e)
+    console.log(
+      `[FROM WORKER-${worldSet.w_ind}] -ERROR ERROR UNKNOWN TASK GIVEN`,
+    );
+    console.log(`[FROM WORKER-${worldSet.w_ind}] - ${Object.keys(e.data)}`, e);
   }
 };
 
@@ -41,7 +43,7 @@ function regularFlow(data) {
     chunkNumber,
     blocksOfChunk: chunkBlocks,
   };
-  postMessage({regFlow:singleChunkResponse});
+  postMessage({ regFlow: singleChunkResponse });
 }
 
 const AMTmap = {
@@ -66,13 +68,13 @@ function genFaceArrays(t, blocks, chunkBlocks) {
   let vertices = [];
   let uvs = [];
   let normals = [];
-  
+
   let uvSize = 1 / 2 / 2 / 2 / 2;
   chunkBlocks.keys.forEach((cen) => {
     let [nx, ny, nz] = cen.split(".");
     let [x, y, z] = blocks[cen].pos;
     let showfaces = [false, false, false, false, false, false];
- 
+
     let currtexture = blocks[cen].texture;
     let uvL = (AMTmap[currtexture][0] - 1) * uvSize;
     let uvB = (AMTmap[currtexture][1] - 1) * uvSize;
@@ -188,14 +190,26 @@ function initialFill(chunkNumbers) {
     for (let x = cS * cnX; x < cS * cnX + cS; x++) {
       for (let y = -1 * Math.abs(depth); y < ys; y++) {
         for (let z = cS * cnZ; z < cS * cnZ + cS; z++) {
-          ty = worldSet.showFlatWorld ? y : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) + y;
+          ty = worldSet.showFlatWorld
+            ? y
+            : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) +
+              y;
 
           key = makeKey(x, ty, z);
           let texture = "";
           if (worldSet["useHeightTextures"]) {
             texture = AMTmapkeys[Math.abs(ty) % difflimit];
-            if(key=="0.-1.0"){
-              console.log({x,y,z,ty,difflimit,math:ty % difflimit,texture,AMTmapkeys})
+            if (key == "0.-1.0") {
+              console.log({
+                x,
+                y,
+                z,
+                ty,
+                difflimit,
+                math: ty % difflimit,
+                texture,
+                AMTmapkeys,
+              });
             }
           } else {
             texture = Math.abs(x - z) < 16 ? "wood" : "grass";
@@ -231,9 +245,7 @@ function initialrendors(fillRes, chunkNumbers) {
       count: fillRes[cn].infoList.length,
     };
 
-    let [vertices, uvs, normals, 
-      // faceIndexMap
-    ] = genFaceArrays(t, blocks, chunkBlocks, cn);
+    let [vertices, uvs, normals] = genFaceArrays(t, blocks, chunkBlocks, cn);
     // console.log(`1---${myind}`)
     vertices = new Float32Array(vertices);
     uvs = new Float32Array(uvs);
@@ -248,7 +260,7 @@ function initialrendors(fillRes, chunkNumbers) {
         vertices,
         uvs,
         normals,
-      }
+      },
     };
   });
   return [blocks, fillRes];

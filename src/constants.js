@@ -41,7 +41,11 @@ const settings = {
 };
 settings.startingChunk =
   settings.worldSettings.worldSize *
-    Math.floor(settings.startingPositionDefault[0] / settings.worldSettings.chunkSize) +
-  Math.floor(settings.startingPositionDefault[2] / settings.worldSettings.chunkSize);
+    Math.floor(
+      settings.startingPositionDefault[0] / settings.worldSettings.chunkSize,
+    ) +
+  Math.floor(
+    settings.startingPositionDefault[2] / settings.worldSettings.chunkSize,
+  );
 
 export default settings;
