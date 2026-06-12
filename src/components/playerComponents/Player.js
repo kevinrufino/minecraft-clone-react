@@ -17,6 +17,16 @@ const t = 0.5; //block half-thickness
 const playerStandingHeight = 1.5;
 const MAX_DT = 0.1; // clamp big frame gaps (tab switches) so physics can't tunnel
 
+// Camera effect constants
+const BASE_FOV = 75;
+const SPRINT_FOV_BONUS = 10;       // extra degrees while sprinting
+const FOV_LERP_SPEED = 8;          // higher = snappier FOV transitions
+const BOB_FREQUENCY = 12;          // sin cycles per unit of accumulated walk distance
+const BOB_AMPLITUDE = 0.025;       // max Y offset in world units
+const LANDING_VEL_THRESHOLD = 6;   // min downward speed (positive mag) to trigger shake
+const LANDING_SHAKE_AMOUNT = 0.18; // max camera dip on landing (world units)
+const LANDING_SHAKE_DECAY = 5;     // lerp speed back to 0 after landing
+
 export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
   const initializedOnce = useRef(false);
   const { camera, scene } = useThree();
@@ -43,6 +53,14 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
   const movementStatus = useRef({
     flying: false,
     onGround: false,
+  });
+
+  // Camera effect state
+  const camEffects = useRef({
+    walkDist: 0,          // accumulated horizontal walk distance for head bob
+    landingShake: 0,      // current downward shake offset (decays to 0)
+    prevOnGround: false,  // tracks last frame's onGround for landing detection
+    prevVelY: 0,          // tracks last frame's vertical velocity for fall speed
   });
 
   const blocktypes = {
@@ -387,6 +405,61 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     }
   }
 
+  function doCameraEffects(dt) {
+    const fx = camEffects.current;
+    const onGround = movementStatus.current.onGround;
+
+    // --- Sprint FOV kick ---
+    const sprinting = moveQuick.on;
+    const targetFov = BASE_FOV + (sprinting ? SPRINT_FOV_BONUS : 0);
+    camera.fov += (targetFov - camera.fov) * Math.min(1, FOV_LERP_SPEED * dt);
+    camera.updateProjectionMatrix();
+
+    // --- Head bob ---
+    const horizSpeed = Math.sqrt(
+      vel.current[0] * vel.current[0] + vel.current[2] * vel.current[2],
+    );
+    const isMovingOnGround = onGround && horizSpeed > 0.5;
+    if (isMovingOnGround) {
+      fx.walkDist += horizSpeed * dt;
+    } else {
+      // smoothly reset the walk distance phase when not moving so the bob
+      // doesn't snap: nudge it toward the nearest multiple of 2π
+      const cycle = (2 * Math.PI) / BOB_FREQUENCY;
+      const remainder = fx.walkDist % cycle;
+      if (remainder > 0) {
+        const step = horizSpeed > 0 ? horizSpeed * dt : 4 * dt;
+        fx.walkDist += Math.min(step, cycle - remainder);
+      }
+    }
+    const bobOffset = isMovingOnGround
+      ? Math.sin(fx.walkDist * BOB_FREQUENCY) * BOB_AMPLITUDE
+      : 0;
+
+    // --- Landing shake ---
+    const justLanded = !fx.prevOnGround && onGround;
+    if (justLanded) {
+      const fallSpeed = Math.abs(fx.prevVelY); // positive magnitude
+      if (fallSpeed >= LANDING_VEL_THRESHOLD) {
+        // Scale shake with fall speed (clamped to max)
+        const intensity = Math.min(
+          1,
+          (fallSpeed - LANDING_VEL_THRESHOLD) / (MAXfallspeed * -1 - LANDING_VEL_THRESHOLD),
+        );
+        fx.landingShake = -LANDING_SHAKE_AMOUNT * intensity;
+      }
+    }
+    // Decay landing shake back toward 0
+    fx.landingShake += (0 - fx.landingShake) * Math.min(1, LANDING_SHAKE_DECAY * dt);
+    if (Math.abs(fx.landingShake) < 0.0005) fx.landingShake = 0;
+
+    // Update tracking state for next frame
+    fx.prevOnGround = onGround;
+    fx.prevVelY = vel.current[1];
+
+    return bobOffset + fx.landingShake;
+  }
+
   function doSightWithJoy() {
     if (settings.ignoreCameraFollowPlayer) {
       return;
@@ -449,9 +522,16 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
       vel.current = [0, 0, 0];
     }
 
+    // Camera effects: bob + landing shake (returns combined Y offset)
+    const camYOffset = doCameraEffects(dt);
+
     // camera follows "player"
     if (!settings.ignoreCameraFollowPlayer) {
-      camera.position.set(...pos.current);
+      camera.position.set(
+        pos.current[0],
+        pos.current[1] + camYOffset,
+        pos.current[2],
+      );
     }
 
     doOnlinePlayerPos();
