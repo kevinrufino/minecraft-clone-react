@@ -1,20 +1,22 @@
 import { useEffect, useRef } from "react";
 
+const keyActionMap = {
+  KeyW: "moveForward",
+  KeyS: "moveBackward",
+  KeyA: "moveLeft",
+  KeyD: "moveRight",
+  KeyQ: "moveQuick",
+  ShiftLeft: "moveDown",
+  ShiftRight: "moveDown",
+  Space: "jump",
+  Digit1: "dirt",
+  Digit2: "grass",
+  Digit3: "glass",
+  Digit4: "wood",
+  Digit5: "log",
+};
+
 function actionByKey(key) {
-  const keyActionMap = {
-    KeyW: "moveForward",
-    KeyS: "moveBackward",
-    KeyA: "moveLeft",
-    KeyD: "moveRight",
-    KeyQ: "moveQuick",
-    keyShift: "moveDown",
-    Space: "jump",
-    Digit1: "dirt",
-    Digit2: "grass",
-    Digit3: "glass",
-    Digit4: "wood",
-    Digit5: "log",
-  };
   return keyActionMap[key];
 }
 
@@ -86,13 +88,8 @@ export const useKeyboard = () => {
     if (action && !actions.current[action].on) {
       let actionObj = actions.current[action];
       actionObj.on = true;
-      // repeat checker
-      console.log("Repeate Checker down");
+      // double-tap detection for sprint
       let newpress = new Date().getTime();
-      console.log({
-        diff: newpress - actionObj.lastPress,
-        count: actionObj.count,
-      });
       if (newpress - actionObj.lastPress > 500) {
         actionObj.count = 0;
       }
@@ -124,7 +121,6 @@ export const useKeyboard = () => {
     if (ableToSpeedUpList.includes(action)) {
       ableToSpeedUpList.forEach((val) => {
         if (actions.current[val].count >= 3) {
-          console.log("MOVING FASTER-----------------------------");
           movefast = true;
         }
       });

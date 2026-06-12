@@ -1,42 +1,36 @@
 import { useState } from "react";
-import { useStore } from "./hooks/useStore";
 import settings from "./constants";
-import { MakeOnlineConnection } from "./components/multiplayerComponents/MakeOnlineConnection";
+import { useOnlineConnection } from "./hooks/useOnlineConnection";
 import TitleScreen from "./components/UIComponents/TitleScreen";
 import CoreGame from "./components/CoreGame";
 
 function App() {
-  const [establishedConn] = useStore((state) => [state.establishedConn]); //begining of online play
-
   const [playerConfigReady, setPCR] = useState(false);
+  const establishedConn = useOnlineConnection(playerConfigReady);
 
-  function gettingWorldLoadScreen() {
-    //this is meant to be a place holder for a potential loading screen as we generate enough of the world before the player.
-    //also a waiting screen for when some one is waiting to connect to online server
-    //@TODO: MakeOnlineConnection should be a hook
-    return (
-      <>
-        <div>Getting World</div>
-        <MakeOnlineConnection />
-      </>
-    );
-  }
-
-  function playerGivenGameSettings(obj) {
-    console.log("from player given game settings");
-    settings.movewithJOY_BOOL = obj.movewithJOY_BOOL;
+  // Called by the title screen once the player has picked name/seed/mode.
+  function playerGivenGameSettings(config) {
+    settings.movewithJOY_BOOL = config.movewithJOY_BOOL;
+    settings.onlineEnabled = config.onlineEnabled;
+    if (config.playerName) {
+      settings.playerName = config.playerName;
+    }
+    if (config.seed) {
+      settings.worldSettings.seed = config.seed;
+    }
     setPCR(true);
   }
 
-  return establishedConn ? (
-    playerConfigReady ? (
-      <CoreGame />
-    ) : (
-      <TitleScreen playerGivenGameSettings={playerGivenGameSettings} />
-    )
-  ) : (
-    gettingWorldLoadScreen()
-  );
+  if (!playerConfigReady) {
+    return <TitleScreen playerGivenGameSettings={playerGivenGameSettings} />;
+  }
+
+  if (!establishedConn) {
+    //waiting screen while connecting to the online server
+    return <div className="connecting-screen">Connecting to server...</div>;
+  }
+
+  return <CoreGame />;
 }
 
 export default App;

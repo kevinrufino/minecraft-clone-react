@@ -1,30 +1,28 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { FormCubeArrays } from "./FormCubeArrays";
 import * as THREE from "three";
-import { useRef } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import settings from "../../constants";
+import { makeKey } from "../../world/keys";
+import { useStore } from "../../hooks/useStore";
 
 export const Chunk = ({
-  chunkNum,
+  chunkKey,
   activeTextureREF,
   chunkProps,
   REF_ALLCUBES,
-  addWorkerJob,
+  applyBlockChange,
 }) => {
   const { camera, scene } = useThree();
-  const chunkTrackBlockCount = useRef(0);
   const chunkTrackVisibility = useRef(false);
   const [updateChunk, setUpdateChunk] = useState(false);
-  let firstPass = useRef(true);
-
-  function makeKey(x, y, z) {
-    return x + "." + y + "." + z;
-  }
+  const [online_addCube, online_removeCube] = useStore((state) => [
+    state.online_addCube,
+    state.online_removeCube,
+  ]);
 
   function clickCubeFace(e) {
     e.stopPropagation();
-    console.log({ which: e.which });
     var raycaster = new THREE.Raycaster();
     var mouse = new THREE.Vector2();
     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -43,86 +41,74 @@ export const Chunk = ({
     });
 
     if (intersect.length > 0) {
-      let currBlocks = REF_ALLCUBES.current;
-      let faceNormal = [
+      const faceNormal = [
         intersect[0].face.normal.x,
         intersect[0].face.normal.y,
         intersect[0].face.normal.z,
       ];
-      let contactBlock = [...intersect[0].point].map((val, ind) => {
+      const contactBlock = [...intersect[0].point].map((val, ind) => {
         return Math.round(val + 0.000002 * faceNormal[ind] * -1);
       });
 
-      let currTexture = activeTextureREF.current;
-
-      if (e.which === 1) {
-        let blockToAdd = contactBlock.map((val, ind) => {
+      if (e.button === 0) {
+        const blockToAdd = contactBlock.map((val, ind) => {
           return val + faceNormal[ind];
         });
-        let newblock = {
-          key: makeKey(...blockToAdd),
-          pos: blockToAdd,
-        };
-        currBlocks[newblock.key] = { pos: newblock.pos, texture: currTexture };
-        chunkProps.current[chunkNum].keys.push(newblock.key);
-        chunkProps.current[chunkNum].count++;
-        REF_ALLCUBES.current = currBlocks;
+        const texture = activeTextureREF.current;
+        // can't place a block inside yourself
+        const [px, py, pz] = camera.position;
+        if (
+          Math.abs(blockToAdd[0] - px) < 0.8 &&
+          Math.abs(blockToAdd[2] - pz) < 0.8 &&
+          blockToAdd[1] > py - 2 &&
+          blockToAdd[1] < py + 0.5
+        ) {
+          return;
+        }
+        applyBlockChange({ type: "add", pos: blockToAdd, texture });
+        if (settings.onlineEnabled) {
+          online_addCube(blockToAdd, texture);
+        }
       }
 
-      if (e.which === 3) {
-        let remove = makeKey(...contactBlock);
-        delete currBlocks[remove];
-        REF_ALLCUBES.current = currBlocks;
-        let r_index = chunkProps.current[chunkNum].keys.indexOf(remove);
-        chunkProps.current[chunkNum].keys[r_index] =
-          chunkProps.current[chunkNum].keys[
-            chunkProps.current[chunkNum].keys.length - 1
-          ];
-        chunkProps.current[chunkNum].keys.length--;
-        chunkProps.current[chunkNum].count--;
+      if (e.button === 2) {
+        const key = makeKey(...contactBlock);
+        const block = REF_ALLCUBES.current[key];
+        if (!block || block.texture === "bedrock") {
+          return;
+        }
+        applyBlockChange({ type: "remove", pos: contactBlock });
+        if (settings.onlineEnabled) {
+          online_removeCube(contactBlock);
+        }
       }
     }
-  }
-
-  function makeKey(x, y, z) {
-    return x + "." + y + "." + z;
   }
 
   useFrame(() => {
-    if (chunkProps.current[chunkNum].count !== chunkTrackBlockCount.current) {
-      chunkTrackBlockCount.current = chunkProps.current[chunkNum].count;
-      if (firstPass.current) {
-        firstPass.current = false;
-      } else {
-        addWorkerJob(chunkNum, "user");
-      }
+    const chunk = chunkProps.current[chunkKey];
+    if (!chunk) {
+      return;
     }
-    if (chunkProps.current[chunkNum].draw.rere) {
-      chunkProps.current[chunkNum].draw.rere = false;
+    if (chunk.draw.rere) {
+      chunk.draw.rere = false;
       setUpdateChunk(!updateChunk); //triggers a rerender
     }
-    if (chunkProps.current[chunkNum].visible !== chunkTrackVisibility.current) {
-      chunkTrackVisibility.current = chunkProps.current[chunkNum].visible;
+    if (chunk.visible !== chunkTrackVisibility.current) {
+      chunkTrackVisibility.current = chunk.visible;
       setUpdateChunk(!updateChunk);
     }
   });
 
-  function handleEmpty() {
-    if (
-      chunkTrackBlockCount.current > 0 &&
-      chunkProps.current[chunkNum].visible
-    ) {
-      return (
-        <FormCubeArrays
-          chunkNum={chunkNum}
-          chunkProps={chunkProps.current[chunkNum]}
-          clickCubeFace={clickCubeFace}
-        />
-      );
-    } else {
-      return <></>;
-    }
+  const chunk = chunkProps.current[chunkKey];
+  if (!chunk || !chunk.visible || !chunk.count) {
+    return null;
   }
-
-  return handleEmpty();
+  return (
+    <FormCubeArrays
+      chunkKey={chunkKey}
+      chunkProps={chunk}
+      clickCubeFace={clickCubeFace}
+    />
+  );
 };
