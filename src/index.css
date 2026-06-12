@@ -23,25 +23,16 @@ body {
   position: fixed;
   overflow: hidden;
   overscroll-behavior-y: none;
-  font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif;
-  font-size: 40px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 16px;
 }
 
-.flex {
-  display: flex;
-}
+/* ── layout helpers ─────────────────────────────────────────────── */
 
-.fixed {
-  position: fixed;
-}
-
-.relative {
-  position: relative;
-}
-
-.absolute {
-  position: absolute;
-}
+.flex    { display: flex; }
+.fixed   { position: fixed; }
+.relative { position: relative; }
+.absolute { position: absolute; }
 
 .centered {
   top: 50%;
@@ -55,158 +46,90 @@ body {
   transform: translate(-50%, -50%);
 }
 
+/* ── crosshair cursor ───────────────────────────────────────────── */
+
 .cursor {
   color: white;
+  font-size: 28px;
+  font-weight: bold;
+  line-height: 1;
+  text-shadow: 0 0 2px #000, 1px 1px 0 #000;
+  pointer-events: none;
+  z-index: 10;
 }
 
-.texture-selector {
-  transform: scale(5);
-}
+/* ── existing misc ──────────────────────────────────────────────── */
 
-.texture-selector img.active {
-  border: 2px solid red;
-}
+.menu  { top: 0px; left: 10px; }
+.help  { top: 0px; right: 10px; font-size: medium; color: white; }
 
-.menu {
-  top: 0px;
-  left: 10px;
-}
+.joystick { border: red 1px solid; }
 
-.help {
-  top: 0px;
-  right: 10px;
-  font-size: medium;
-  color: white;
-}
-
-
-#loadingpage{
-  background-color: red;
-}
-
-
-#LowerControlStrip{
+#LowerControlStrip {
   background-color: green;
-  position:absolute;
+  position: absolute;
   z-index: 10;
   width: 100vw;
-  height: min(2,50vh);
+  height: min(2, 50vh);
   bottom: 0px;
   display: flex;
   justify-content: space-between;
-  /* align-self:flex-end; */
 }
 
-.joystick{
-  border: red 1px solid;
-}
-
-@import url('https://fonts.googleapis.com/css?family=Press+Start+2P');
-@import url('https://fonts.googleapis.com/css2?family=Rubik+Iso&family=Wallpoet&display=swap');
+/* ── Minecraft text classes (kept for backward compat) ──────────── */
 
 .minecraft-text {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 24px; /* Adjust the size as needed */
-  color: #00ff00; /* Set your desired color */
-  stroke: #00ff00;
-}
-.minecraft-text2 {
-  font-family: 'Rubik Iso', cursive;
-  color: black; /* Set your desired color */
-  stroke: black;
-}
-.minecraft-text3 {
-  font-family: 'Wallpoet', cursive;
-  /* font-size: 80px;  */
-  color: black;
-  stroke: black;
-  stroke-width: .5px;
-  /* background-color: #00ff00; */
+  font-family: "Courier New", Courier, monospace;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #00ff00;
 }
 
+.minecraft-text2 {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  color: black;
+}
+
+.minecraft-text3 {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: black;
+}
+
+/* ── legacy card/container (kept for backward compat) ──────────── */
 
 .card {
-    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
-    transition: 0.3s;
-    width: 40vw;
-    height: 80vh;
-  }
-  
-
-  .card:hover {
-    box-shadow: 16px 16px 16px 16px rgba(0,0,0,0.6);
-  }
-  
-
-  .container {
-    padding: 2px 16px;
-    height: 100%;
-    background-color: red;
-  }
-
-  .pageContainer{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    width: 100vw;
-    position:absolute;
-    top: 0;
-    left:0;
-  }
-
-
-
-
-.input-group > * {
-  font-size: small;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  transition: 0.3s;
+  width: 40vw;
+  height: 80vh;
 }
 
-  input,
-  textarea {
-    /* font-size: small; */
-  }
-  
-  .input-group {
-    display: table;
-    border-collapse: collapse;
-    width: 100%;
-    height: 10px;
-  }
-  
-  .input-group > * {
-    display: table-cell;
-    /* border: 1px solid black; */
-    vertical-align: middle;
-  }
-  
-  div.input-group> label{
-    border-radius: 10px 0px 0px 10px;
-  }
-  div.input-group-area> input{
-    border-radius: 0px 10px 10px 0px;
-  }
-  
-  .input-group-icon {
-    background-color: #eee;
-    color: #777;
-    padding: 5px 5px;
-  }
-  
-  .input-group-area {
-    width: 100%;
-  }
-  
-  .input-group input {
-    border: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-    padding: 0px;
-  }
+.card:hover {
+  box-shadow: 16px 16px 16px 16px rgba(0, 0, 0, 0.6);
+}
 
+.container {
+  padding: 2px 16px;
+  height: 100%;
+  background-color: red;
+}
 
-.TitleCard_Container{
+.pageContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.TitleCard_Container {
   background-color: black;
   height: 100%;
   width: 100%;
@@ -215,13 +138,511 @@ body {
   align-items: center;
 }
 
-.TitleCard_ColorBlock{
-  width: min(80%,100vh);
+.TitleCard_ColorBlock { width: min(80%, 100vh); }
+.TitleCard_Heading {}
+.TitleCard_SubHeading {}
+.TitleCard_Button {}
+.TitleCard_Form {}
+.TitleCard_FormButton {}
+
+/* ── Minecraft-style shared button ─────────────────────────────── */
+
+.mc-play-btn {
+  display: block;
+  width: 100%;
+  padding: 12px 8px;
+  margin-top: 10px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 2px 2px 0 #333;
+  background: linear-gradient(to bottom, #8b8b8b 0%, #6b6b6b 49%, #5a5a5a 50%, #6b6b6b 100%);
+  border: none;
+  border-top: 2px solid #c8c8c8;
+  border-left: 2px solid #c8c8c8;
+  border-right: 2px solid #373737;
+  border-bottom: 2px solid #373737;
+  cursor: pointer;
+  outline: none;
+  transition: filter 0.05s ease;
+  user-select: none;
 }
 
-.TitleCard_Heading{}
-.TitleCard_SubHeading{}
-.TitleCard_Button{}
-.TitleCard_Form{}
-.TitleCard_FormButton{}
+.mc-play-btn:hover {
+  filter: brightness(1.25);
+}
 
+.mc-play-btn:active {
+  border-top: 2px solid #373737;
+  border-left: 2px solid #373737;
+  border-right: 2px solid #c8c8c8;
+  border-bottom: 2px solid #c8c8c8;
+  filter: brightness(0.9);
+}
+
+.mc-play-btn--danger {
+  background: linear-gradient(to bottom, #8b4040 0%, #6b2a2a 49%, #5a1f1f 50%, #6b2a2a 100%);
+  border-top-color: #c87070;
+  border-left-color: #c87070;
+}
+
+/* ── Title Screen ───────────────────────────────────────────────── */
+
+.title-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.title-screen__bg {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+  background-size: 64px 64px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.title-screen__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.title-screen__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(480px, 92vw);
+}
+
+.title-screen__logo {
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(32px, 9vw, 72px);
+  font-weight: bold;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow:
+    4px 4px 0 #3a3a3a,
+    -2px -2px 0 #555,
+    6px 6px 0 #000,
+    0 0 20px rgba(100, 220, 80, 0.5);
+  margin: 0 0 28px 0;
+  text-align: center;
+}
+
+.title-screen__panel {
+  background: rgba(0, 0, 0, 0.72);
+  border: 3px solid #555;
+  border-bottom-color: #222;
+  border-right-color: #222;
+  border-top-color: #888;
+  border-left-color: #888;
+  padding: 24px 28px 20px;
+  width: 100%;
+}
+
+.mc-field {
+  margin-bottom: 14px;
+}
+
+.mc-label {
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #ccc;
+  text-shadow: 1px 1px 0 #000;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.mc-input {
+  display: block;
+  width: 100%;
+  padding: 10px 10px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  font-weight: bold;
+  color: #fff;
+  background: #1a1a1a;
+  border: 2px solid #555;
+  border-top-color: #222;
+  border-left-color: #222;
+  border-bottom-color: #888;
+  border-right-color: #888;
+  outline: none;
+  letter-spacing: 1px;
+}
+
+.mc-input:focus {
+  border-color: #7ec850;
+  background: #1e2a1a;
+}
+
+.mc-mode-row {
+  display: flex;
+  gap: 8px;
+}
+
+.mc-mode-btn {
+  flex: 1;
+  padding: 10px 4px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ccc;
+  text-shadow: 1px 1px 0 #000;
+  background: linear-gradient(to bottom, #6b6b6b 0%, #4a4a4a 49%, #3a3a3a 50%, #4a4a4a 100%);
+  border: none;
+  border-top: 2px solid #999;
+  border-left: 2px solid #999;
+  border-right: 2px solid #222;
+  border-bottom: 2px solid #222;
+  cursor: pointer;
+  outline: none;
+  transition: filter 0.05s ease;
+}
+
+.mc-mode-btn:hover {
+  filter: brightness(1.2);
+}
+
+.mc-mode-btn--active {
+  color: #fff;
+  text-shadow: 1px 1px 0 #000, 0 0 8px #7ec850;
+  background: linear-gradient(to bottom, #5a7a3a 0%, #3d5c28 49%, #2e4a1c 50%, #3d5c28 100%);
+  border-top-color: #8dc860;
+  border-left-color: #8dc860;
+}
+
+.title-screen__footer {
+  position: fixed;
+  bottom: 10px;
+  right: 14px;
+  z-index: 1;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(200, 200, 200, 0.6);
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* ── Connecting screen ──────────────────────────────────────────── */
+
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.connecting-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url("./images/dirt.jpg");
+  background-repeat: repeat;
+  background-size: 64px 64px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  z-index: 200;
+}
+
+.connecting-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.connecting-screen::after {
+  content: "Connecting to server...";
+  position: relative;
+  z-index: 1;
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(14px, 3vw, 22px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+  animation: pulse-opacity 1.4s ease-in-out infinite;
+}
+
+/* hide the original text node — we show it via ::after */
+.connecting-screen > * {
+  display: none;
+}
+
+/* ── Loading World Screen ───────────────────────────────────────── */
+
+@keyframes loading-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-repeat: repeat;
+  background-size: 64px 64px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.loading-screen--fade {
+  animation: loading-fade-out 0.6s ease forwards;
+}
+
+.loading-screen__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.loading-screen__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(400px, 88vw);
+}
+
+.loading-screen__title {
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(18px, 5vw, 28px);
+  font-weight: bold;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 3px 3px 0 #000;
+  margin: 0 0 20px 0;
+}
+
+.loading-screen__bar-track {
+  width: 100%;
+  height: 28px;
+  background: #111;
+  border: 3px solid #555;
+  border-top-color: #222;
+  border-left-color: #222;
+  border-bottom-color: #888;
+  border-right-color: #888;
+  overflow: hidden;
+}
+
+.loading-screen__bar-fill {
+  height: 100%;
+  background: linear-gradient(to bottom, #7ec850 0%, #5aaa30 49%, #48921e 50%, #5aaa30 100%);
+  transition: width 0.2s ease;
+  min-width: 0;
+}
+
+.loading-screen__pct {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #ccc;
+  margin-top: 8px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.loading-screen__workers {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  color: #888;
+  margin-top: 6px;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* ── Hotbar ─────────────────────────────────────────────────────── */
+
+.hotbar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 20;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid #555;
+  border-top-color: #888;
+  border-left-color: #888;
+  border-bottom-color: #222;
+  border-right-color: #222;
+}
+
+.hotbar__slot {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 20, 20, 0.7);
+  border: 2px solid #444;
+  border-top-color: #222;
+  border-left-color: #222;
+  border-bottom-color: #666;
+  border-right-color: #666;
+  transition: transform 0.07s ease, border-color 0.07s ease;
+}
+
+.hotbar__slot--active {
+  border: 3px solid #fff;
+  box-shadow: inset 0 0 0 1px #aaa;
+  transform: scale(1.1);
+}
+
+.hotbar__img {
+  width: 38px;
+  height: 38px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+/* ── Pause / Click-to-play Overlay ──────────────────────────────── */
+
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.pause-overlay__panel {
+  background: rgba(0, 0, 0, 0.82);
+  border: 3px solid #555;
+  border-top-color: #888;
+  border-left-color: #888;
+  border-bottom-color: #222;
+  border-right-color: #222;
+  padding: 28px 36px 24px;
+  width: min(420px, 90vw);
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pause-overlay__title {
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(16px, 4vw, 24px);
+  font-weight: bold;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 3px 3px 0 #000;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+.pause-overlay__controls {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 18px;
+}
+
+.pause-overlay__controls tr + tr td {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pause-overlay__key {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #f0c050;
+  text-shadow: 1px 1px 0 #000;
+  padding: 6px 10px 6px 0;
+  white-space: nowrap;
+}
+
+.pause-overlay__action {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #ccc;
+  text-shadow: 1px 1px 0 #000;
+  padding: 6px 0;
+}
+
+.pause-overlay__btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.pause-overlay__click-btn {
+  margin-top: 4px;
+}
+
+/* ── input / form legacy ────────────────────────────────────────── */
+
+.input-group > * { font-size: small; }
+
+input,
+textarea { }
+
+.input-group {
+  display: table;
+  border-collapse: collapse;
+  width: 100%;
+  height: 10px;
+}
+
+.input-group > * {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+div.input-group > label         { border-radius: 10px 0px 0px 10px; }
+div.input-group-area > input    { border-radius: 0px 10px 10px 0px; }
+
+.input-group-icon {
+  background-color: #eee;
+  color: #777;
+  padding: 5px 5px;
+}
+
+.input-group-area { width: 100%; }
+
+.input-group input {
+  border: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0px;
+}
+
+/* ── legacy texture-selector (unused but kept to avoid breaking refs) */
+.texture-selector { transform: scale(5); }
+.texture-selector img.active { border: 2px solid red; }
