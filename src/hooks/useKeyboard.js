@@ -104,31 +104,56 @@ export const useKeyboard = () => {
     const action = actionByKey(e.code);
     if (action) {
       actions.current[action].on = false;
+      // sprint ends when no direction key is held any more (moveQuick is
+      // the sprint flag itself -- it must not block its own clearing)
+      const directionKeys = [
+        "moveForward",
+        "moveBackward",
+        "moveLeft",
+        "moveRight",
+        "moveDown",
+      ];
+      if (
+        ableToSpeedUpList.includes(action) &&
+        !directionKeys.some((a) => actions.current[a].on)
+      ) {
+        actions.current.moveQuick.on = false;
+        actions.current.moveQuick.count = 0;
+      }
     }
   };
 
+  const ableToSpeedUpList = [
+    "moveForward",
+    "moveBackward",
+    "moveLeft",
+    "moveRight",
+    "moveQuick",
+    "moveDown",
+  ];
+
   function checkMoveFast(action) {
-    let ableToSpeedUpList = [
-      "moveForward",
-      "moveBackward",
-      "moveLeft",
-      "moveRight",
-      "moveQuick",
-      "moveDown",
-      // "jump"
-    ];
-    let movefast = false;
-    if (ableToSpeedUpList.includes(action)) {
-      ableToSpeedUpList.forEach((val) => {
-        if (actions.current[val].count >= 3) {
-          movefast = true;
-        }
-      });
+    // only movement keys may touch sprint state -- pressing Space or a
+    // hotbar digit used to reset moveQuick and kill sprint mid-jump
+    if (!ableToSpeedUpList.includes(action)) {
+      return;
     }
-    actions.current.moveQuick.on = movefast;
+    let movefast = false;
+    ableToSpeedUpList.forEach((val) => {
+      // double-tap (2 presses inside the window) starts sprinting
+      if (actions.current[val].count >= 2) {
+        movefast = true;
+      }
+    });
+    if (movefast) {
+      actions.current.moveQuick.on = true;
+    }
   }
 
   useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      window.__keys = actions.current;
+    }
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     return () => {

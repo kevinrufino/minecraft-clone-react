@@ -9,7 +9,7 @@ export const FormCubeArrays = ({ chunkKey, clickCubeFace, chunkProps }) => {
   return (
     <DrawCubesGeo
       info={draw}
-      key={`ACmesh${draw.cc || 0}-${chunkKey}`}
+      key={`ACmesh${draw.rev || 0}-${chunkKey}`}
       clickCubeFace={clickCubeFace}
     />
   );

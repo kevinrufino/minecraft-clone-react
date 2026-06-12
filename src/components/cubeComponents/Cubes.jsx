@@ -73,6 +73,10 @@ export const Cubes = ({
     return worker;
   };
 
+  // monotonic revision so every re-mesh remounts its geometry -- reusing a
+  // bufferGeometry with different-sized arrays corrupts/blanks the mesh
+  const meshRev = useRef(0);
+
   function handleWorkerUserChangeResponse(data) {
     const { draw, count, chunkKey } = data;
     if (!chunks.current[chunkKey]) {
@@ -80,6 +84,7 @@ export const Cubes = ({
     }
     chunks.current[chunkKey].draw = {
       cc: count,
+      rev: ++meshRev.current,
       solid: draw.solid,
       trans: draw.trans,
       rere: true,
@@ -189,10 +194,79 @@ export const Cubes = ({
     }
   }
 
+  // ---- water flow (Minecraft-style, simplified) ----
+  // Water spreads down freely and sideways up to FLOW_RANGE cells. The queue
+  // holds positions to examine; only cells that are water act. Every path
+  // that changes blocks feeds it, so remote players' digs flow too.
+  const FLOW_RANGE = 4;
+  const flowQueue = useRef([]);
+  const lastFlowTick = useRef(0);
+
+  function enqueueFlowAround(pos) {
+    const [x, y, z] = pos;
+    flowQueue.current.push(
+      [x + 1, y, z],
+      [x - 1, y, z],
+      [x, y, z + 1],
+      [x, y, z - 1],
+      [x, y + 1, z],
+    );
+  }
+
+  function tickWaterFlow() {
+    const now = performance.now();
+    if (!flowQueue.current.length || now - lastFlowTick.current < 200) {
+      return;
+    }
+    lastFlowTick.current = now;
+    const batch = flowQueue.current.splice(0, 64);
+    batch.forEach(([x, y, z]) => {
+      const cell = REF_ALLCUBES.current[makeKey(x, y, z)];
+      if (!cell || cell.texture !== "water") {
+        return;
+      }
+      const flow = cell.flow ?? FLOW_RANGE; // generated water is a source
+      const belowKey = makeKey(x, y - 1, z);
+      if (!REF_ALLCUBES.current[belowKey] && y - 1 > worldSettings.minY) {
+        // falling water keeps full strength
+        applyBlockChange({
+          type: "add",
+          pos: [x, y - 1, z],
+          texture: "water",
+          flow: FLOW_RANGE,
+        });
+      } else if (flow > 1) {
+        [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ].forEach(([dx, dz]) => {
+          if (!REF_ALLCUBES.current[makeKey(x + dx, y, z + dz)]) {
+            applyBlockChange({
+              type: "add",
+              pos: [x + dx, y, z + dz],
+              texture: "water",
+              flow: flow - 1,
+            });
+          }
+        });
+      }
+    });
+  }
+
   // Single entry point for every block mutation: local clicks, remote
   // players, and persisted-edit replay all flow through here.
   function applyBlockChange(event) {
     recordEdit(event, !settings.onlineEnabled);
+
+    if (event.type === "remove") {
+      // neighboring water may flow into the new hole
+      enqueueFlowAround(event.pos);
+    } else if (event.texture === "water") {
+      // newly placed/flowed water may keep spreading
+      flowQueue.current.push([...event.pos]);
+    }
 
     const ck = chunkKeyFromPosition(
       event.pos[0],
@@ -211,7 +285,11 @@ export const Cubes = ({
       if (existing && existing.texture !== "water") {
         return;
       }
-      REF_ALLCUBES.current[key] = { pos: event.pos, texture: event.texture };
+      REF_ALLCUBES.current[key] = {
+        pos: event.pos,
+        texture: event.texture,
+        ...(event.flow != null && { flow: event.flow }),
+      };
       if (!existing) {
         chunk.keys.push(key);
         chunk.count++;
@@ -289,6 +367,8 @@ export const Cubes = ({
     if (!chunksMadeCounter.current.loaddone || !FillerLoadDoneValue) {
       return;
     }
+
+    tickWaterFlow();
 
     // performance tuning changed the render distance
     if (lastRadius.current !== settings.viewRadius) {
