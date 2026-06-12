@@ -5,24 +5,32 @@ import TitleScreen from "./components/UIComponents/TitleScreen";
 import CoreGame from "./components/CoreGame";
 
 function App() {
-  const establishedConn = useOnlineConnection();
   const [playerConfigReady, setPCR] = useState(false);
+  const establishedConn = useOnlineConnection(playerConfigReady);
 
-  function playerGivenGameSettings(obj) {
-    settings.movewithJOY_BOOL = obj.movewithJOY_BOOL;
+  // Called by the title screen once the player has picked name/seed/mode.
+  function playerGivenGameSettings(config) {
+    settings.movewithJOY_BOOL = config.movewithJOY_BOOL;
+    settings.onlineEnabled = config.onlineEnabled;
+    if (config.playerName) {
+      settings.playerName = config.playerName;
+    }
+    if (config.seed) {
+      settings.worldSettings.seed = config.seed;
+    }
     setPCR(true);
+  }
+
+  if (!playerConfigReady) {
+    return <TitleScreen playerGivenGameSettings={playerGivenGameSettings} />;
   }
 
   if (!establishedConn) {
     //waiting screen while connecting to the online server
-    return <div>Connecting to multiplayer server...</div>;
+    return <div className="connecting-screen">Connecting to server...</div>;
   }
 
-  return playerConfigReady ? (
-    <CoreGame />
-  ) : (
-    <TitleScreen playerGivenGameSettings={playerGivenGameSettings} />
-  );
+  return <CoreGame />;
 }
 
 export default App;

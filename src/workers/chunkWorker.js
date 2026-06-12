@@ -1,8 +1,8 @@
 import { createNoise2D } from "simplex-noise";
 import alea from "alea";
 import { makeKey } from "../world/keys";
-import { AMTmapkeys } from "../world/atlas";
-import { genFaceArrays } from "../world/meshGen";
+import { parseChunkKey } from "../world/chunkMath";
+import { genFaceArrays, packDrawArrays } from "../world/meshGen";
 
 let worldSet = {};
 
@@ -28,99 +28,128 @@ function initializeWorker(init) {
   postMessage({ init: true });
 }
 
-// Rebuilds a single chunk's mesh after a user placed or removed a block.
+// Rebuilds a single chunk's mesh after a block was placed or removed.
 function regularFlow(data) {
-  let { t, blocks, chunkBlocks, chunkNumber } = data;
+  const { t, blocks, chunkBlocks, chunkKey } = data;
 
-  let [vertices, uvs, normals] = genFaceArrays(t, blocks, chunkBlocks);
-  vertices = new Float32Array(vertices);
-  uvs = new Float32Array(uvs);
-  normals = new Float32Array(normals);
-  const singleChunkResponse = {
-    vertices,
-    uvs,
-    normals,
-    count: chunkBlocks.count,
-    chunkNumber,
-    blocksOfChunk: chunkBlocks,
-  };
-  postMessage({ regFlow: singleChunkResponse });
+  const draw = packDrawArrays(genFaceArrays(t, blocks, chunkBlocks));
+  postMessage({
+    regFlow: {
+      draw,
+      count: chunkBlocks.count,
+      chunkKey,
+    },
+  });
 }
 
-// Generates terrain blocks for a batch of chunks, then meshes them.
-function initialFill(chunkNumbers) {
+// Terrain column height from two octaves of seeded noise. Shifted down so
+// low areas dip below sea level and fill with water.
+function surfaceHeight(x, z) {
+  const noise2D = worldSet.genNoise2D;
+  const broad = (noise2D(x / 100, z / 100) + 1) / 2; // rolling hills
+  const detail = (noise2D(x / 25, z / 25) + 1) / 2; // small bumps
+  return Math.floor(broad * worldSet.heightFactor + detail * 3) - 3;
+}
+
+function columnBlocks(x, z, info, infoList) {
+  const h = surfaceHeight(x, z);
+  const { minY, waterLevel } = worldSet;
+  const beach = h <= waterLevel + 1;
+
+  for (let y = minY; y <= h; y++) {
+    let texture;
+    if (y === minY) {
+      texture = "bedrock";
+    } else if (y === h) {
+      texture = beach ? "sand" : "grass";
+    } else if (y >= h - 3) {
+      texture = beach ? "sand" : "dirt";
+    } else {
+      texture = "stone";
+    }
+    const key = makeKey(x, y, z);
+    infoList.push(key);
+    info[key] = { pos: [x, y, z], texture };
+  }
+
+  // fill up to sea level with water
+  for (let y = h + 1; y <= waterLevel; y++) {
+    const key = makeKey(x, y, z);
+    infoList.push(key);
+    info[key] = { pos: [x, y, z], texture: "water" };
+  }
+}
+
+// Generates terrain blocks for a batch of chunks, applies player edits,
+// then meshes them.
+function initialFill({ chunks, edits }) {
   const fillRes = {};
-  chunkNumbers.forEach((chunkNumber) => {
-    const cS = worldSet.chunkSize;
-    const wS = worldSet.worldSize;
-    const cnX = Math.floor(chunkNumber / wS);
-    const cnZ = chunkNumber % wS;
-    const noise2D = worldSet.genNoise2D;
+  const cS = worldSet.chunkSize;
+
+  chunks.forEach((ck) => {
+    const { cx, cz } = parseChunkKey(ck);
     const info = {};
     const infoList = [];
-    const ys = 1;
-    const heightFactor = worldSet.heightFactor;
-    const depth = worldSet.depth;
-    const difflimit = AMTmapkeys.length;
 
-    for (let x = cS * cnX; x < cS * cnX + cS; x++) {
-      for (let y = -1 * Math.abs(depth); y < ys; y++) {
-        for (let z = cS * cnZ; z < cS * cnZ + cS; z++) {
-          const ty = worldSet.showFlatWorld
-            ? y
-            : Math.floor(((noise2D(x / 100, z / 100) + 1) * heightFactor) / 2) +
-              y;
-
-          const key = makeKey(x, ty, z);
-          let texture = "";
-          if (worldSet.useHeightTextures) {
-            texture = AMTmapkeys[Math.abs(ty) % difflimit];
-          } else {
-            texture = Math.abs(x - z) < 16 ? "wood" : "grass";
-          }
-          infoList.push(key);
-          info[key] = {
-            pos: [x, ty, z],
-            texture,
-          };
-        }
+    for (let x = cS * cx; x < cS * cx + cS; x++) {
+      for (let z = cS * cz; z < cS * cz + cS; z++) {
+        columnBlocks(x, z, info, infoList);
       }
     }
-    fillRes[chunkNumber] = { info, infoList };
+
+    fillRes[ck] = { info, infoList };
   });
-  const [ac, testor] = initialRenders(fillRes, chunkNumbers);
-  postMessage({ worldFiller: { chunkNumbers, ac, testor } });
+
+  // overlay player edits (adds/removes recorded against generated terrain)
+  if (edits) {
+    const chunkSet = {};
+    chunks.forEach((ck) => {
+      chunkSet[ck] = fillRes[ck];
+    });
+    Object.entries(edits).forEach(([blockKey, event]) => {
+      const cx = Math.floor(event.pos[0] / cS);
+      const cz = Math.floor(event.pos[2] / cS);
+      const res = chunkSet[cx + "." + cz];
+      if (!res) {
+        return;
+      }
+      if (event.type === "add") {
+        if (!res.info[blockKey]) {
+          res.infoList.push(blockKey);
+        }
+        res.info[blockKey] = { pos: event.pos, texture: event.texture };
+      } else if (event.type === "remove" && res.info[blockKey]) {
+        delete res.info[blockKey];
+        res.infoList.splice(res.infoList.indexOf(blockKey), 1);
+      }
+    });
+  }
+
+  const [ac, testor] = initialRenders(fillRes, chunks);
+  postMessage({ worldFiller: { chunkKeys: chunks, ac, testor } });
 }
 
-function initialRenders(fillRes, chunkNumbers) {
+function initialRenders(fillRes, chunkKeys) {
   const t = 0.5;
 
-  let blocks = {};
-  chunkNumbers.forEach((cn) => {
-    Object.assign(blocks, fillRes[cn].info);
+  const blocks = {};
+  chunkKeys.forEach((ck) => {
+    Object.assign(blocks, fillRes[ck].info);
   });
 
-  chunkNumbers.forEach((cn) => {
+  chunkKeys.forEach((ck) => {
     const chunkBlocks = {
-      keys: fillRes[cn].infoList,
-      count: fillRes[cn].infoList.length,
+      keys: fillRes[ck].infoList,
+      count: fillRes[ck].infoList.length,
     };
 
-    let [vertices, uvs, normals] = genFaceArrays(t, blocks, chunkBlocks);
-    vertices = new Float32Array(vertices);
-    uvs = new Float32Array(uvs);
-    normals = new Float32Array(normals);
+    const draw = packDrawArrays(genFaceArrays(t, blocks, chunkBlocks));
 
-    fillRes[cn] = {
-      keys: fillRes[cn].infoList,
-      count: fillRes[cn].infoList.length,
+    fillRes[ck] = {
+      keys: fillRes[ck].infoList,
+      count: fillRes[ck].infoList.length,
       visible: false,
-      draw: {
-        rere: false,
-        vertices,
-        uvs,
-        normals,
-      },
+      draw: { rere: false, ...draw },
     };
   });
   return [blocks, fillRes];

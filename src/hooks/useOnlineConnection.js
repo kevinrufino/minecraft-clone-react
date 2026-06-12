@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import settings from "../constants";
 import { useStore } from "./useStore";
 import { applyRemoteBlockEvent } from "../world/remoteBlocks";
+import { clearEdits } from "../world/edits";
 import io from "socket.io-client";
 
 // Server code lives at https://github.com/GreyDaCaLa/ReactMineCraftCloneServer
@@ -31,13 +32,16 @@ function connectSocket() {
   });
 
   sharedSocket.on("S_GiveWorld", (world) => {
-    // replay every block other players placed before we joined
+    // replay every block edit made before we joined
     (world.cubes || []).forEach((cube) => {
       applyRemoteBlockEvent({
         type: "add",
         pos: cube.pos,
         texture: cube.texture,
       });
+    });
+    (world.removed || []).forEach((pos) => {
+      applyRemoteBlockEvent({ type: "remove", pos });
     });
     store.online_setPlayersPos(world.players);
     store.online_SetEstablishedConn(true);
@@ -55,6 +59,7 @@ function connectSocket() {
     applyRemoteBlockEvent({ type: "remove", pos });
   });
   sharedSocket.on("S_BlocksReset", () => {
+    clearEdits();
     window.location.reload();
   });
 
@@ -73,19 +78,23 @@ function connectSocket() {
 }
 
 // Opens the socket.io connection and keeps player/world state in the store.
+// `start` is false until the player picks a game mode on the title screen.
 // When online play is disabled this just marks the connection as established
 // so the game can proceed.
-export function useOnlineConnection() {
+export function useOnlineConnection(start) {
   const establishedConn = useStore((state) => state.establishedConn);
 
   useEffect(() => {
+    if (!start) {
+      return;
+    }
     if (settings.onlineEnabled) {
       connectSocket();
     } else if (!useStore.getState().establishedConn) {
       useStore.getState().online_SetEstablishedConn(true);
     }
     // the server removes our player on disconnect, so no unmount cleanup needed
-  }, []);
+  }, [start]);
 
   return establishedConn;
 }

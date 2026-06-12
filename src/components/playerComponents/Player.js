@@ -45,7 +45,7 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     floor: {
       solid: [], // default to solid
       liquid: ["water"],
-      air: [],
+      air: ["water"], // non-solid for collision purposes
     },
   };
 
@@ -113,31 +113,17 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     doSightWithJoy();
   }
 
-  //stop player from moving outside world boundries
-  function checkAbsoluteMapLimits([x, y, z]) {
-    let worldSideLen =
-      settings.worldSettings.chunkSize * settings.worldSettings.worldSize;
-
-    if (pos.current[0] <= 0.1) {
-      x = 1;
-    }
-    if (pos.current[0] >= worldSideLen - 0.9) {
-      x = -1;
-    }
-    if (pos.current[1] <= 0.1) {
-      y = 1;
-    }
-    if (pos.current[2] <= 0.1) {
-      z = 1;
-    }
-    if (pos.current[2] >= worldSideLen - 0.9) {
-      z = -1;
-    }
-    return [x, y, z];
+  function isInWater() {
+    const [x, y, z] = pos.current.map(Math.round);
+    const feet = REF_ALLCUBES.current[makeKey(x, y - 1, z)];
+    const eyes = REF_ALLCUBES.current[makeKey(x, y, z)];
+    return feet?.texture === "water" || eyes?.texture === "water";
   }
 
   function worldPhysicsController(direction, surrData, dt) {
     let [vel_x, vel_y, vel_z] = [direction.x, direction.y, direction.z];
+    const inWater = isInWater();
+    movementStatus.current.inWater = inWater;
 
     if (!movementStatus.current.flying) {
       //check vertical limits
@@ -147,6 +133,14 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
 
       if (!movementStatus.current.onGround) {
         vel_y += GRAVITY * dt;
+        // water: sink slowly, swim up with jump
+        if (inWater) {
+          const maxSink = -2;
+          vel_y = vel_y < maxSink ? maxSink : vel_y;
+          if (jump.on || moveBools.current.jump) {
+            vel_y = 3;
+          }
+        }
         vel_y = vel_y <= MAXfallspeed ? MAXfallspeed : vel_y;
 
         //check bottom
@@ -257,7 +251,7 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
       vel_z = velArr[2];
     }
 
-    return checkAbsoluteMapLimits([vel_x, vel_y, vel_z]);
+    return [vel_x, vel_y, vel_z];
   }
 
   function checkTerrain() {
@@ -403,6 +397,12 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     pos.current[1] += vel.current[1] * dt;
     pos.current[2] += vel.current[2] * dt;
 
+    // fell out of the world (e.g. into an ungenerated chunk) -- respawn
+    if (pos.current[1] < settings.worldSettings.minY - 20) {
+      pos.current = [...playerStartingPostion];
+      vel.current = [0, 0, 0];
+    }
+
     // camera follows "player"
     if (!settings.ignoreCameraFollowPlayer) {
       camera.position.set(...pos.current);
@@ -414,6 +414,11 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
       window.__playerPos = [...pos.current];
       window.__camDir = camera.getWorldDirection(new Vector3()).toArray();
       window.__camera = camera;
+      window.__teleport = (x, y, z) => {
+        pos.current = [x, y, z];
+        vel.current = [0, 0, 0];
+      };
+      window.__blocks = REF_ALLCUBES.current;
     }
   });
 

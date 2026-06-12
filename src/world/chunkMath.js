@@ -1,44 +1,45 @@
-// Chunk ids are laid out x-major: id = worldSize * chunkX + chunkZ,
-// where chunkX/chunkZ are the chunk's grid coordinates.
+// Chunks are identified by string keys "cx.cz" where cx/cz are the chunk's
+// grid coordinates (floor(blockX / chunkSize)). The world is unbounded, so
+// coordinates can be negative.
 
-export function chunkIdToXY(id, worldSize) {
-  const y = Math.floor(id / worldSize);
-  const x = id - y * worldSize;
-  return { x, y };
+export function chunkKey(cx, cz) {
+  return cx + "." + cz;
 }
 
-export function distBetweenChunks(idA, idB, worldSize) {
-  const a = chunkIdToXY(idA, worldSize);
-  const b = chunkIdToXY(idB, worldSize);
-  return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
+export function parseChunkKey(key) {
+  const [cx, cz] = key.split(".").map(Number);
+  return { cx, cz };
 }
 
-export function chunkIdFromPosition(x, z, { worldSize, chunkSize }) {
-  return worldSize * Math.floor(x / chunkSize) + Math.floor(z / chunkSize);
+export function chunkCoordsFromPosition(x, z, chunkSize) {
+  return { cx: Math.floor(x / chunkSize), cz: Math.floor(z / chunkSize) };
 }
 
-// All chunk ids within `radius` (euclidean, in chunk units) of currentChunk,
-// clipped to the world bounds.
-export function getNearbyChunkIds(currentChunk, radius, worldSize) {
-  const nearby = new Set();
-  const cc = chunkIdToXY(currentChunk, worldSize);
+export function chunkKeyFromPosition(x, z, chunkSize) {
+  const { cx, cz } = chunkCoordsFromPosition(x, z, chunkSize);
+  return chunkKey(cx, cz);
+}
 
-  for (let x = -radius; x <= radius; x++) {
-    for (let y = -radius; y <= radius; y++) {
-      const id = currentChunk + worldSize * y + x;
-      if (id < 0 || id >= worldSize * worldSize) {
+export function distBetweenChunks(keyA, keyB) {
+  const a = parseChunkKey(keyA);
+  const b = parseChunkKey(keyB);
+  return ((a.cx - b.cx) ** 2 + (a.cz - b.cz) ** 2) ** 0.5;
+}
+
+// All chunk keys within `radius` (euclidean, in chunk units) of centerKey.
+export function getNearbyChunkKeys(centerKey, radius) {
+  const { cx, cz } = parseChunkKey(centerKey);
+  const nearby = [];
+  const r = Math.ceil(radius);
+
+  for (let dx = -r; dx <= r; dx++) {
+    for (let dz = -r; dz <= r; dz++) {
+      if ((dx ** 2 + dz ** 2) ** 0.5 > radius) {
         continue;
       }
-
-      const p = chunkIdToXY(id, worldSize);
-      const chunkDist = ((p.x - cc.x) ** 2 + (p.y - cc.y) ** 2) ** 0.5;
-      if (chunkDist > radius) {
-        continue;
-      }
-
-      nearby.add(id);
+      nearby.push(chunkKey(cx + dx, cz + dz));
     }
   }
 
-  return [...nearby];
+  return nearby;
 }

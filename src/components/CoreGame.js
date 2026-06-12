@@ -34,7 +34,7 @@ const CoreGame = () => {
   const activeTextureREF = useRef("dirt");
   const chunksMadeCounter = useRef({
     loaddone: false,
-    track: { count: 0, max: settings.worldSettings.worldSize ** 2 },
+    track: { count: 0, max: 0 }, // max is set once the initial fill is queued
   });
   const [initStatus, setInitStatus] = useState({
     buildWorkers: 0,
@@ -71,6 +71,15 @@ const CoreGame = () => {
         <></>
       )}
       <Canvas>
+        {/* fog hides the chunk-loading edge; far matches the view radius */}
+        <fog
+          attach="fog"
+          args={[
+            "#d7e7f5",
+            settings.viewRadius * settings.worldSettings.chunkSize * 0.55,
+            settings.viewRadius * settings.worldSettings.chunkSize * 0.98,
+          ]}
+        />
         {showFPS && <Stats />}
         <PerformanceMonitor
           onIncline={() =>
