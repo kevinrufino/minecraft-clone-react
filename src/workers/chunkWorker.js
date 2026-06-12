@@ -24,8 +24,20 @@ onmessage = (e) => {
 function initializeWorker(init) {
   worldSet = { ...init.worldSettings };
   worldSet.genNoise2D = createNoise2D(alea(worldSet.seed));
+  worldSet.seedNum = String(worldSet.seed)
+    .split("")
+    .reduce((a, c) => a + c.charCodeAt(0) * 31, 7);
 
   postMessage({ init: true });
+}
+
+// Deterministic per-position hash in [0,1) -- trees must land on the same
+// columns no matter which chunk (or which worker) generates them.
+function hash01(x, z, salt) {
+  let h = (x | 0) * 374761393 + (z | 0) * 668265263 + salt * 1274126177;
+  h = (h ^ (h >> 13)) * 1103515245;
+  h = h ^ (h >> 16);
+  return (h >>> 0) / 4294967296;
 }
 
 // Rebuilds a single chunk's mesh after a block was placed or removed.
@@ -80,6 +92,70 @@ function columnBlocks(x, z, info, infoList) {
   }
 }
 
+const TREE_CHANCE = 0.012;
+const TREE_MARGIN = 2; // canopy radius -- trees this close outside a chunk spill into it
+
+// Returns the tree rooted at column (x,z), or null. Deterministic.
+function treeAt(x, z) {
+  if (hash01(x, z, worldSet.seedNum) >= TREE_CHANCE) {
+    return null;
+  }
+  const h = surfaceHeight(x, z);
+  if (h <= worldSet.waterLevel + 1) {
+    return null; // no trees on beaches or underwater
+  }
+  const trunkH = 4 + Math.floor(hash01(x, z, worldSet.seedNum + 1) * 3);
+  return { x, z, baseY: h + 1, topY: h + trunkH };
+}
+
+// Writes the tree's blocks that fall inside the chunk bounds [x0,x1)x[z0,z1).
+function placeTree(tree, x0, x1, z0, z1, info, infoList) {
+  const put = (x, y, z, texture) => {
+    if (x < x0 || x >= x1 || z < z0 || z >= z1) {
+      return;
+    }
+    const key = makeKey(x, y, z);
+    if (info[key] && info[key].texture !== "water") {
+      return; // never overwrite solid terrain
+    }
+    if (!info[key]) {
+      infoList.push(key);
+    }
+    info[key] = { pos: [x, y, z], texture };
+  };
+
+  // canopy: two wide layers around the trunk top, then a small cap
+  for (let y = tree.topY - 1; y <= tree.topY; y++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        if (Math.abs(dx) === 2 && Math.abs(dz) === 2) {
+          continue; // clip corners
+        }
+        put(tree.x + dx, y, tree.z + dz, "leaves");
+      }
+    }
+  }
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      put(tree.x + dx, tree.topY + 1, tree.z + dz, "leaves");
+    }
+  }
+  put(tree.x, tree.topY + 2, tree.z, "leaves");
+
+  // trunk last so it wins over leaves
+  for (let y = tree.baseY; y <= tree.topY; y++) {
+    const key = makeKey(tree.x, y, tree.z);
+    if (tree.x >= x0 && tree.x < x1 && tree.z >= z0 && tree.z < z1) {
+      if (!info[key] || info[key].texture === "leaves") {
+        if (!info[key]) {
+          infoList.push(key);
+        }
+        info[key] = { pos: [tree.x, y, tree.z], texture: "log" };
+      }
+    }
+  }
+}
+
 // Generates terrain blocks for a batch of chunks, applies player edits,
 // then meshes them.
 function initialFill({ chunks, edits }) {
@@ -91,9 +167,21 @@ function initialFill({ chunks, edits }) {
     const info = {};
     const infoList = [];
 
-    for (let x = cS * cx; x < cS * cx + cS; x++) {
-      for (let z = cS * cz; z < cS * cz + cS; z++) {
+    const x0 = cS * cx;
+    const z0 = cS * cz;
+    for (let x = x0; x < x0 + cS; x++) {
+      for (let z = z0; z < z0 + cS; z++) {
         columnBlocks(x, z, info, infoList);
+      }
+    }
+
+    // trees: scan a margin beyond the chunk so neighbors' canopies spill in
+    for (let x = x0 - TREE_MARGIN; x < x0 + cS + TREE_MARGIN; x++) {
+      for (let z = z0 - TREE_MARGIN; z < z0 + cS + TREE_MARGIN; z++) {
+        const tree = treeAt(x, z);
+        if (tree) {
+          placeTree(tree, x0, x0 + cS, z0, z0 + cS, info, infoList);
+        }
       }
     }
 

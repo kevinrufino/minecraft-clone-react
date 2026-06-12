@@ -7,10 +7,11 @@ import { useStore } from "../../hooks/useStore";
 import { makeKey } from "../../world/keys";
 import { FPV } from "./controls/FPV";
 
-const JUMP_VEL = 10;
+const GRAVITY = -25; // units/s^2 -- gentle, for a floaty Minecraft-y arc
+const JUMP_HEIGHT = 1.5; // blocks
+const JUMP_VEL = Math.sqrt(2 * -GRAVITY * JUMP_HEIGHT); // ≈8.66
 const SPEED = 4;
 const QUICKFACTOR = 2;
-const GRAVITY = -60; // units/s^2
 const MAXfallspeed = -10;
 const t = 0.5; //block half-thickness
 const playerStandingHeight = 1.5;
@@ -419,6 +420,8 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
         vel.current = [0, 0, 0];
       };
       window.__blocks = REF_ALLCUBES.current;
+      window.__vel = vel.current;
+      window.__onGround = movementStatus.current.onGround;
     }
   });
 

@@ -21,8 +21,8 @@ export const Cubes = ({
   const { camera } = useThree();
   const [FillerLoadDoneValue, setFillerLoadDone] = useState(false);
   const [chunkKeyList, setChunkKeyList] = useState([]);
-  const viewRadius = settings.viewRadius; //distance (in chunks) chunks are shown
-  const outerViewRadius = settings.outerViewRadius; //distance (in chunks) we ensure are built
+  // view radii are read from settings on every use -- CoreGame adjusts them
+  // live based on measured performance
   const fillBatchSize = settings.fillBatchSize; // chunks allowed per worker job
   const worldSettings = settings.worldSettings;
   const renderDistPrecentage = settings.renderDistPrecentage;
@@ -261,6 +261,8 @@ export const Cubes = ({
     return missing.length;
   }
 
+  const lastRadius = useRef(settings.viewRadius);
+
   useFrame(() => {
     const pChunk = chunkKeyFromPosition(
       camera.position.x,
@@ -268,18 +270,26 @@ export const Cubes = ({
       worldSettings.chunkSize,
     );
 
-    if (
-      playerChunkPosition.current !== pChunk &&
-      chunksMadeCounter.current.loaddone &&
-      FillerLoadDoneValue
-    ) {
+    if (!chunksMadeCounter.current.loaddone || !FillerLoadDoneValue) {
+      return;
+    }
+
+    // performance tuning changed the render distance
+    if (lastRadius.current !== settings.viewRadius) {
+      lastRadius.current = settings.viewRadius;
+      fillMissingChunks(pChunk, settings.outerViewRadius);
+      updateDisplayedChunks(pChunk);
+    }
+
+    if (playerChunkPosition.current !== pChunk) {
       playerChunkPosition.current = pChunk;
       if (
         distBetweenChunks(lastRenderChunk.current, pChunk) >=
-        renderDistPrecentage * (outerViewRadius - viewRadius)
+        renderDistPrecentage *
+          (settings.outerViewRadius - settings.viewRadius)
       ) {
         lastRenderChunk.current = pChunk;
-        fillMissingChunks(pChunk, outerViewRadius);
+        fillMissingChunks(pChunk, settings.outerViewRadius);
       }
       updateDisplayedChunks(pChunk);
     }
@@ -306,7 +316,7 @@ export const Cubes = ({
     }
     // initial world fill around spawn
     if (workerList.current[0] && !chunksMadeCounter.current.loaddone) {
-      const queued = fillMissingChunks(spawnChunk, outerViewRadius);
+      const queued = fillMissingChunks(spawnChunk, settings.outerViewRadius);
       chunksMadeCounter.current.track.max = queued;
     }
 
@@ -315,7 +325,10 @@ export const Cubes = ({
   }, []);
 
   function updateDisplayedChunks(currentChunk) {
-    const chunksToDisplay = getNearbyChunkKeys(currentChunk, viewRadius);
+    const chunksToDisplay = getNearbyChunkKeys(
+      currentChunk,
+      settings.viewRadius,
+    );
     const removeChunks = activeChunks.current.filter((ck) => {
       return !chunksToDisplay.includes(ck);
     });

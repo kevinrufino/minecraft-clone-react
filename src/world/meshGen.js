@@ -83,8 +83,11 @@ export function genFaceArrays(t, blocks, chunkBlocks) {
     function pushFace(corners, normal, face, shade) {
       target.vertices.push(...corners[0], ...corners[1], ...corners[2]);
       target.vertices.push(...corners[3], ...corners[4], ...corners[5]);
+      // grass tops and leaves are grayscale tiles tinted green (classic MC)
       const tint =
-        texture === "grass" && face === "top" ? GRASS_TINT : [1, 1, 1];
+        (texture === "grass" && face === "top") || texture === "leaves"
+          ? GRASS_TINT
+          : [1, 1, 1];
       for (let i = 0; i < 6; i++) {
         target.normals.push(...normal);
         target.colors.push(tint[0] * shade, tint[1] * shade, tint[2] * shade);
