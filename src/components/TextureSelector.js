@@ -13,6 +13,9 @@ const images = {
 
 const texturesArray = Object.keys(images);
 
+// 9 hotbar slots: first 5 have textures, last 4 are empty
+const HOTBAR_SLOTS = 9;
+
 export const TextureSelector = ({ activeTextureREF }) => {
   const [activeTexture, setTexture] = useStore((state) => [
     state.texture,
@@ -49,18 +52,30 @@ export const TextureSelector = ({ activeTextureREF }) => {
     return () => {
       window.removeEventListener("wheel", handleWheel);
     };
-  }, [setTexture, dirt, grass, glass, wood, log, activeTexture]);
+  }, [setTexture, dirt, grass, glass, wood, log, activeTexture, activeTextureREF]);
+
+  const slots = Array.from({ length: HOTBAR_SLOTS }, (_, i) => {
+    const key = texturesArray[i] || null;
+    return { key, src: key ? images[key] : null };
+  });
 
   return (
-    <div className="absolute centered-bottom texture-selector">
-      {Object.entries(images).map(([k, src]) => {
+    <div className="hotbar">
+      {slots.map((slot, i) => {
+        const isActive = slot.key === activeTexture;
         return (
-          <img
-            key={k}
-            src={src}
-            alt={k}
-            className={`${k === activeTexture ? "active" : ""}`}
-          />
+          <div
+            key={i}
+            className={`hotbar__slot${isActive ? " hotbar__slot--active" : ""}`}
+          >
+            {slot.src && (
+              <img
+                src={slot.src}
+                alt={slot.key}
+                className="hotbar__img"
+              />
+            )}
+          </div>
         );
       })}
     </div>

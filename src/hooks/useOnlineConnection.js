@@ -48,6 +48,10 @@ function connectSocket() {
   });
   sharedSocket.on("S_GiveplayerNum", (pnum) => {
     store.online_setplayerNum(pnum);
+    sharedSocket.emit("C_SetName", {
+      worldname: null,
+      name: settings.playerName,
+    });
   });
   sharedSocket.on("S_HeartBeat", (world) => {
     useStore.getState().online_setPlayersPos(world.players);

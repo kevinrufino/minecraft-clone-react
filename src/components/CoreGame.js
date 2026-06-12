@@ -7,6 +7,7 @@ import { Scene } from "./Scene";
 import settings from "../constants";
 import { OrbitControls } from "@react-three/drei";
 import { LoadingWorldScreen } from "./UIComponents/LoadingWorldScreen";
+import PauseOverlay from "./UIComponents/PauseOverlay";
 import LowerControlStrip from "../hooks/LowerControlStrip";
 import { useRef, useState } from "react";
 import { useControls } from "leva";
@@ -45,13 +46,11 @@ const CoreGame = () => {
   // live debug panel -- tweak render toggles here while playing
   const {
     showUIContent,
-    showTextureSelector,
     showFPS,
     showSky,
     orbitalControlsEnabled,
   } = useControls({
     showUIContent: { value: false, label: "show UI content" },
-    showTextureSelector: { value: false, label: "show texture selector" },
     showFPS: { value: true, label: "show FPS" },
     showSky: { value: true, label: "show sky" },
     orbitalControlsEnabled: { value: false, label: "orbital controls" },
@@ -112,9 +111,8 @@ const CoreGame = () => {
       {!settings.ignoreCameraFollowPlayer && (
         <div className="cursor centered absolute">+</div>
       )}
-      {showTextureSelector && (
-        <TextureSelector activeTextureREF={activeTextureREF} />
-      )}
+      <TextureSelector activeTextureREF={activeTextureREF} />
+      <PauseOverlay />
     </>
   );
 };
