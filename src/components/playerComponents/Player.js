@@ -19,7 +19,10 @@ const MAX_DT = 0.1; // clamp big frame gaps (tab switches) so physics can't tunn
 
 export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
   const initializedOnce = useRef(false);
-  const { camera } = useThree();
+  const { camera, scene } = useThree();
+  if (process.env.NODE_ENV === "development") {
+    window.__scene = scene;
+  }
   const {
     moveBackward,
     moveForward,
@@ -50,7 +53,31 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     },
   };
 
+  // double-tap Space toggles creative-style flight
+  const flyTap = useRef({ lastTap: 0, prevOn: false });
+
+  function checkFlyToggle() {
+    if (jump.on && !flyTap.current.prevOn) {
+      const now = performance.now();
+      if (now - flyTap.current.lastTap < 300) {
+        movementStatus.current.flying = !movementStatus.current.flying;
+        movementStatus.current.onGround = false;
+        vel.current[1] = 0;
+        flyTap.current.lastTap = 0;
+      } else {
+        flyTap.current.lastTap = now;
+      }
+    }
+    flyTap.current.prevOn = jump.on;
+  }
+
+  const wasSprintingOnGround = useRef(false);
+
   function doMovement(dt) {
+    checkFlyToggle();
+    const flying = movementStatus.current.flying;
+    const onGround = movementStatus.current.onGround;
+
     const direction = new Vector3();
     const frontVector = new Vector3(
       0,
@@ -63,19 +90,37 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
       0,
       0,
     );
+    const hasHorizInput = frontVector.z !== 0 || sideVector.x !== 0;
+
+    // sprint carries through the whole jump, not just while moveQuick is set
+    if (onGround || flying) {
+      wasSprintingOnGround.current = moveQuick.on;
+    }
+    const sprinting = moveQuick.on || (!onGround && wasSprintingOnGround.current);
+    const speed = (sprinting ? SPEED * QUICKFACTOR : SPEED) * (flying ? 2 : 1);
 
     direction
       .subVectors(frontVector, sideVector)
       .normalize()
-      .multiplyScalar(moveQuick.on ? SPEED * QUICKFACTOR : SPEED)
-      .applyEuler(camera.rotation);
+      .multiplyScalar(speed)
+      // yaw only: looking up/down must not change horizontal speed
+      .applyEuler(new Euler(0, camera.rotation.y, 0, "YXZ"));
+
+    // airborne with no input: keep horizontal momentum instead of stopping dead
+    if (!onGround && !flying && !hasHorizInput) {
+      direction.x = vel.current[0];
+      direction.z = vel.current[2];
+    }
 
     direction.y = vel.current[1]; // this line maintains gravity
+    if (flying) {
+      direction.y = (jump.on ? 8 : 0) - (moveDown.on ? 8 : 0);
+    }
 
     const surrData = checkTerrain();
     vel.current = worldPhysicsController(direction, surrData, dt);
 
-    if (jump.on && movementStatus.current.onGround) {
+    if (!flying && jump.on && movementStatus.current.onGround) {
       vel.current[1] = JUMP_VEL;
       movementStatus.current.onGround = false;
     }

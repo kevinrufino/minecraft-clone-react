@@ -269,6 +269,17 @@ export const Cubes = ({
   const lastRadius = useRef(settings.viewRadius);
 
   useFrame(() => {
+    if (process.env.NODE_ENV === "development") {
+      window.__chunkDebug = {
+        chunks: Object.keys(chunks.current).length,
+        visible: Object.values(chunks.current).filter((c) => c.visible).length,
+        rendered: chunkKeyList.length,
+        radius: settings.viewRadius,
+        pending: pendingFill.current.size,
+        queue: workerPendingJob.current.length,
+        pChunk: playerChunkPosition.current,
+      };
+    }
     const pChunk = chunkKeyFromPosition(
       camera.position.x,
       camera.position.z,

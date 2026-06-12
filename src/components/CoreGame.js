@@ -113,8 +113,6 @@ const CoreGame = () => {
         />
         <DayNight showSky={showSky} />
         <Clouds />
-        <BlockOutline />
-        <HeldBlock />
         <Scene
           activeTextureREF={activeTextureREF}
           updateInitStatus={updateInitStatus}
@@ -122,6 +120,9 @@ const CoreGame = () => {
           chunksMadeCounter={chunksMadeCounter}
           moveBools={moveBools}
         />
+        {/* after Scene so their useFrame runs after the camera has moved */}
+        <BlockOutline />
+        <HeldBlock />
 
         {orbitalControlsEnabled && <OrbitControls />}
       </Canvas>

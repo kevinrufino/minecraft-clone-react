@@ -39,10 +39,21 @@ const PauseOverlay = () => {
 
   const isPaused = hasBeenLocked;
 
+  function quitToTitle(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+    window.location.reload();
+  }
+
   return (
     <div
       className="pause-overlay"
-      onClick={requestLock}
+      // click-anywhere only on the first "Click to play" screen; when paused
+      // a stray click must not re-lock and swallow the Quit button press
+      onClick={isPaused ? undefined : requestLock}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -71,13 +82,16 @@ const PauseOverlay = () => {
           <div className="pause-overlay__btn-row">
             <button
               className="mc-play-btn"
-              onClick={requestLock}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                requestLock();
+              }}
             >
               Back to Game
             </button>
             <button
               className="mc-play-btn mc-play-btn--danger"
-              onClick={() => window.location.reload()}
+              onPointerDown={quitToTitle}
             >
               Quit to Title
             </button>

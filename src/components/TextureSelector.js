@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useKeyboard } from "../hooks/useKeyboard";
 import { useStore } from "../hooks/useStore";
 import { dirtImg, grassImg, glassImg, logImg, woodImg } from "../images/images";
 
@@ -21,21 +20,12 @@ export const TextureSelector = ({ activeTextureREF }) => {
     state.texture,
     state.setTexture,
   ]);
-  const { dirt, grass, glass, wood, log } = useKeyboard();
 
   useEffect(() => {
     function pickTexture(texture) {
       setTexture(texture);
       activeTextureREF.current = texture;
     }
-
-    const pressedTexture = Object.entries({
-      dirt,
-      grass,
-      glass,
-      wood,
-      log,
-    }).find(([k, v]) => v.on);
 
     function handleWheel(event) {
       const delta = Math.sign(event.deltaY);
@@ -45,14 +35,25 @@ export const TextureSelector = ({ activeTextureREF }) => {
       }
     }
 
-    window.addEventListener("wheel", handleWheel);
-    if (pressedTexture) {
-      pickTexture(pressedTexture[0]);
+    // 1-9 select hotbar slots directly (only filled slots respond)
+    function handleKeyDown(event) {
+      const m = /^Digit([1-9])$/.exec(event.code);
+      if (!m) {
+        return;
+      }
+      const slot = Number(m[1]) - 1;
+      if (texturesArray[slot]) {
+        pickTexture(texturesArray[slot]);
+      }
     }
+
+    window.addEventListener("wheel", handleWheel);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("wheel", handleWheel);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [setTexture, dirt, grass, glass, wood, log, activeTexture, activeTextureREF]);
+  }, [setTexture, activeTexture, activeTextureREF]);
 
   const slots = Array.from({ length: HOTBAR_SLOTS }, (_, i) => {
     const key = texturesArray[i] || null;
@@ -69,11 +70,7 @@ export const TextureSelector = ({ activeTextureREF }) => {
             className={`hotbar__slot${isActive ? " hotbar__slot--active" : ""}`}
           >
             {slot.src && (
-              <img
-                src={slot.src}
-                alt={slot.key}
-                className="hotbar__img"
-              />
+              <img src={slot.src} alt={slot.key} className="hotbar__img" />
             )}
           </div>
         );

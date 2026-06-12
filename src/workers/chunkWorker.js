@@ -92,8 +92,8 @@ function columnBlocks(x, z, info, infoList) {
   }
 }
 
-const TREE_CHANCE = 0.012;
-const TREE_MARGIN = 2; // canopy radius -- trees this close outside a chunk spill into it
+const TREE_CHANCE = 0.005;
+const TREE_MARGIN = 3; // max canopy radius -- trees this close outside a chunk spill into it
 
 // Returns the tree rooted at column (x,z), or null. Deterministic.
 function treeAt(x, z) {
@@ -104,8 +104,27 @@ function treeAt(x, z) {
   if (h <= worldSet.waterLevel + 1) {
     return null; // no trees on beaches or underwater
   }
-  const trunkH = 4 + Math.floor(hash01(x, z, worldSet.seedNum + 1) * 3);
-  return { x, z, baseY: h + 1, topY: h + trunkH };
+
+  // three species, each with per-tree height variation
+  const species = hash01(x, z, worldSet.seedNum + 2);
+  let trunkH, radius, tall;
+  if (species < 0.25) {
+    // shrubby sapling: short trunk, tight canopy
+    trunkH = 3 + Math.floor(hash01(x, z, worldSet.seedNum + 1) * 2); // 3-4
+    radius = 1;
+    tall = false;
+  } else if (species < 0.85) {
+    // classic oak
+    trunkH = 4 + Math.floor(hash01(x, z, worldSet.seedNum + 1) * 3); // 4-6
+    radius = 2;
+    tall = hash01(x, z, worldSet.seedNum + 3) < 0.3; // some get a taller crown
+  } else {
+    // big old tree
+    trunkH = 7 + Math.floor(hash01(x, z, worldSet.seedNum + 1) * 3); // 7-9
+    radius = 3;
+    tall = true;
+  }
+  return { x, z, baseY: h + 1, topY: h + trunkH, radius, tall };
 }
 
 // Writes the tree's blocks that fall inside the chunk bounds [x0,x1)x[z0,z1).
@@ -124,23 +143,33 @@ function placeTree(tree, x0, x1, z0, z1, info, infoList) {
     info[key] = { pos: [x, y, z], texture };
   };
 
-  // canopy: two wide layers around the trunk top, then a small cap
-  for (let y = tree.topY - 1; y <= tree.topY; y++) {
-    for (let dx = -2; dx <= 2; dx++) {
-      for (let dz = -2; dz <= 2; dz++) {
-        if (Math.abs(dx) === 2 && Math.abs(dz) === 2) {
+  // canopy: wide layers around the trunk top, then a narrower cap
+  const r = tree.radius;
+  const wideFrom = tree.topY - (tree.tall ? 2 : 1);
+  for (let y = wideFrom; y <= tree.topY; y++) {
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dz = -r; dz <= r; dz++) {
+        if (Math.abs(dx) === r && Math.abs(dz) === r && r > 1) {
           continue; // clip corners
         }
         put(tree.x + dx, y, tree.z + dz, "leaves");
       }
     }
   }
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dz = -1; dz <= 1; dz++) {
+  const capR = Math.max(1, r - 1);
+  for (let dx = -capR; dx <= capR; dx++) {
+    for (let dz = -capR; dz <= capR; dz++) {
+      if (Math.abs(dx) === capR && Math.abs(dz) === capR && capR > 1) {
+        continue;
+      }
       put(tree.x + dx, tree.topY + 1, tree.z + dz, "leaves");
     }
   }
   put(tree.x, tree.topY + 2, tree.z, "leaves");
+  if (tree.tall) {
+    put(tree.x + 1, tree.topY + 2, tree.z, "leaves");
+    put(tree.x, tree.topY + 2, tree.z + 1, "leaves");
+  }
 
   // trunk last so it wins over leaves
   for (let y = tree.baseY; y <= tree.topY; y++) {

@@ -39,6 +39,13 @@ export function HeldBlock() {
     };
   }, []);
 
+  const bobAmp = useRef(0);
+
+  // NOTE: must run AFTER the Player's useFrame has moved the camera or the
+  // block trails the view by a frame (jitter). That ordering comes from
+  // mounting HeldBlock after Scene in CoreGame -- do NOT use a useFrame
+  // priority for this: any positive priority puts r3f into manual-render
+  // mode and the whole canvas goes blank.
   useFrame((_, delta) => {
     if (!groupRef.current || !cubeRef.current) return;
 
@@ -50,19 +57,23 @@ export function HeldBlock() {
     const currentPos = camera.position;
     let speedX = 0;
     let speedZ = 0;
-    if (prevPos.current) {
+    if (prevPos.current && delta > 0) {
       speedX = (currentPos.x - prevPos.current.x) / delta;
       speedZ = (currentPos.z - prevPos.current.z) / delta;
     }
     prevPos.current = { x: currentPos.x, z: currentPos.z };
 
     const horizontalSpeed = Math.sqrt(speedX * speedX + speedZ * speedZ);
-    if (horizontalSpeed > 0.5) {
-      bobTime.current += delta * 10;
+    // amplitude eases in/out instead of snapping when speed crosses the
+    // threshold, which read as jitter
+    const targetAmp = horizontalSpeed > 0.5 ? 1 : 0;
+    bobAmp.current += (targetAmp - bobAmp.current) * Math.min(1, delta * 8);
+    if (bobAmp.current > 0.01) {
+      bobTime.current += delta * 8;
     }
 
-    const bobY = Math.sin(bobTime.current) * 0.02;
-    const bobX = Math.cos(bobTime.current * 0.5) * 0.01;
+    const bobY = Math.sin(bobTime.current) * 0.02 * bobAmp.current;
+    const bobX = Math.cos(bobTime.current * 0.5) * 0.01 * bobAmp.current;
 
     // Swing animation
     swingRef.current = Math.max(0, swingRef.current - delta * 4);
@@ -79,9 +90,11 @@ export function HeldBlock() {
 
   return (
     <group ref={groupRef}>
+      {/* transparent so it draws in the same pass as water; renderOrder 999
+          + no depth test keeps it on top even when looking at a lake */}
       <mesh ref={cubeRef} scale={0.4} renderOrder={999}>
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial map={tex} depthTest={false} />
+        <meshStandardMaterial map={tex} depthTest={false} transparent />
       </mesh>
     </group>
   );
