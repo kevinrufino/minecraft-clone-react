@@ -1,27 +1,23 @@
-import { useSphere } from "@react-three/cannon";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { Vector3, Euler } from "three";
 import settings from "../../constants";
 import { useKeyboard } from "../../hooks/useKeyboard";
 import { useStore } from "../../hooks/useStore";
+import { makeKey } from "../../world/keys";
 import { FPV } from "./controls/FPV";
 
-const JUMP_HIEGHT = 10;
 const JUMP_VEL = 10;
 const SPEED = 4;
 const QUICKFACTOR = 2;
-const t = 0.5; //thickness -- should be in a better universal place
+const GRAVITY = -60; // units/s^2
 const MAXfallspeed = -10;
+const t = 0.5; //block half-thickness
 const playerStandingHeight = 1.5;
+const MAX_DT = 0.1; // clamp big frame gaps (tab switches) so physics can't tunnel
 
-export const Player = ({
-  myRadius = 0.5,
-  moveBools,
-  playerStartingPostion,
-  REF_ALLCUBES,
-}) => {
-  const setStartingRotationOnce = useRef(true);
+export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
+  const initializedOnce = useRef(false);
   const { camera } = useThree();
   const {
     moveBackward,
@@ -32,27 +28,16 @@ export const Player = ({
     jump,
     moveQuick,
   } = useKeyboard();
-  const [ref, api] = useSphere(() => ({
-    mass: 0,
-    type: "Dynamic",
-    position: playerStartingPostion,
-    rotation: settings.startingRotationDefault,
-    args: [myRadius],
-  }));
-  const acc = useRef([0, -1, 0]); // default gravity
+
   const vel = useRef([0, 0, 0]); // current velocity
-  const pos = useRef(playerStartingPostion);
-  const rot = useRef([0, (180 * Math.PI) / 180, 0, "YXZ"]);
+  const pos = useRef([...playerStartingPostion]); // current position
+  const rot = useRef([0, Math.PI, 0, "YXZ"]);
   const [socket, online_sendPos] = useStore((state) => [
     state.socket,
     state.online_sendPos,
   ]);
   const movementStatus = useRef({
     flying: false,
-    running: false,
-    falling: false,
-    jumping: false,
-    inWater: false,
     onGround: false,
   });
 
@@ -64,7 +49,7 @@ export const Player = ({
     },
   };
 
-  function doMovement() {
+  function doMovement(dt) {
     const direction = new Vector3();
     const frontVector = new Vector3(
       0,
@@ -86,26 +71,16 @@ export const Player = ({
 
     direction.y = vel.current[1]; // this line maintains gravity
 
-    //stop player from moving into the negatives -- outside world boundries
-    let surrData = checkTerrain([direction.x, direction.y, direction.z]);
-    api.velocity.set(...worldPhysicsController(direction, surrData));
+    const surrData = checkTerrain();
+    vel.current = worldPhysicsController(direction, surrData, dt);
 
-    // jump
     if (jump.on && movementStatus.current.onGround) {
       vel.current[1] = JUMP_VEL;
       movementStatus.current.onGround = false;
-      api.velocity.set(vel.current[0], vel.current[1], vel.current[2]);
-    }
-
-    // camera follows "player"
-    if (!settings.ignoreCameraFollowPlayer) {
-      camera.position.copy(
-        new Vector3(pos.current[0], pos.current[1], pos.current[2]),
-      );
     }
   }
 
-  function doMovementWithJoy() {
+  function doMovementWithJoy(dt) {
     const direction = new Vector3();
     const frontVector = new Vector3(
       0,
@@ -125,31 +100,21 @@ export const Player = ({
       .multiplyScalar(SPEED * (moveBools.current.moveQuick * QUICKFACTOR + 1))
       .applyEuler(new Euler(...rot.current));
 
-    //stop player from moving into the negatives
-    api.velocity.set(...checkAbsoluteMapLimits(direction));
+    direction.y = vel.current[1];
 
-    // jump
-    if (jump && Math.abs(vel.current[1]) < 0.05) {
-      api.velocity.set(
-        vel.current[0],
-        vel.current[1] + JUMP_HIEGHT,
-        vel.current[2],
-      );
-    }
+    const surrData = checkTerrain();
+    vel.current = worldPhysicsController(direction, surrData, dt);
 
-    // camera follows "player"
-    if (!settings.ignoreCameraFollowPlayer) {
-      camera.position.copy(
-        new Vector3(pos.current[0], pos.current[1], pos.current[2]),
-      );
+    if (moveBools.current.jump && movementStatus.current.onGround) {
+      vel.current[1] = JUMP_VEL;
+      movementStatus.current.onGround = false;
     }
 
     doSightWithJoy();
   }
 
-  function checkAbsoluteMapLimits(direction) {
-    // let [x,y,z] = [direction.x,direction.y,direction.z]
-    let [x, y, z] = direction;
+  //stop player from moving outside world boundries
+  function checkAbsoluteMapLimits([x, y, z]) {
     let worldSideLen =
       settings.worldSettings.chunkSize * settings.worldSettings.worldSize;
 
@@ -171,9 +136,8 @@ export const Player = ({
     return [x, y, z];
   }
 
-  function worldPhysicsController(direction, surrData) {
+  function worldPhysicsController(direction, surrData, dt) {
     let [vel_x, vel_y, vel_z] = [direction.x, direction.y, direction.z];
-    // they take directional speed, then divide by 60 (probs from frames), and then add it to the position for smooth motion
 
     if (!movementStatus.current.flying) {
       //check vertical limits
@@ -182,7 +146,7 @@ export const Player = ({
       }
 
       if (!movementStatus.current.onGround) {
-        vel_y += acc.current[1];
+        vel_y += GRAVITY * dt;
         vel_y = vel_y <= MAXfallspeed ? MAXfallspeed : vel_y;
 
         //check bottom
@@ -190,29 +154,24 @@ export const Player = ({
           let bottomblock = REF_ALLCUBES.current[surrData.surroundingBlocks.b];
 
           if (!blocktypes.floor.air.includes(bottomblock.texture)) {
-            let newy = (camera.position.y + vel_y / 60).toFixed(5);
+            let newy = pos.current[1] + vel_y * dt;
             let found = bottomblock.pos[1] + t;
             if (newy - playerStandingHeight < found) {
               vel_y = 0;
               movementStatus.current.onGround = true;
-
               pos.current[1] = bottomblock.pos[1] + t + playerStandingHeight;
-              api.position.set(...pos.current);
             }
           }
         }
         //check top
         if (surrData.surroundingBlocks.t) {
-          console.log({ t: surrData.surroundingBlocks.t });
-
           let topblock = REF_ALLCUBES.current[surrData.surroundingBlocks.t];
           if (!blocktypes.floor.air.includes(topblock.texture)) {
-            let newy = (camera.position.y + vel_y / 60).toFixed(5);
+            let newy = pos.current[1] + vel_y * dt;
             let found = topblock.pos[1] - t - 0.3;
             if (newy > found) {
               vel_y = 0;
               pos.current[1] = topblock.pos[1] - t - 0.3;
-              api.position.set(...pos.current);
             }
           }
         }
@@ -221,14 +180,14 @@ export const Player = ({
       }
 
       let sides = [
-        { s: "lb", cord: "z", cordnum: 2, dir: 1 },
-        { s: "lt", cord: "z", cordnum: 2, dir: 1 },
-        { s: "rt", cord: "z", cordnum: 2, dir: -1 },
-        { s: "rb", cord: "z", cordnum: 2, dir: -1 },
-        { s: "ft", cord: "x", cordnum: 0, dir: -1 },
-        { s: "fb", cord: "x", cordnum: 0, dir: -1 },
-        { s: "bt", cord: "x", cordnum: 0, dir: 1 },
-        { s: "bb", cord: "x", cordnum: 0, dir: 1 },
+        { s: "lb", cordnum: 2, dir: 1 },
+        { s: "lt", cordnum: 2, dir: 1 },
+        { s: "rt", cordnum: 2, dir: -1 },
+        { s: "rb", cordnum: 2, dir: -1 },
+        { s: "ft", cordnum: 0, dir: -1 },
+        { s: "fb", cordnum: 0, dir: -1 },
+        { s: "bt", cordnum: 0, dir: 1 },
+        { s: "bb", cordnum: 0, dir: 1 },
       ];
       let diags = [
         { s: "lfb", dirx: -1, dirz: 1 },
@@ -240,30 +199,28 @@ export const Player = ({
         { s: "rbt", dirx: 1, dirz: -1 },
         { s: "rbb", dirx: 1, dirz: -1 },
       ];
-      let vel = [vel_x, vel_y, vel_z];
+      let velArr = [vel_x, vel_y, vel_z];
       if (isPlayerGivingInput()) {
-        sides.forEach((side, ind) => {
+        sides.forEach((side) => {
           if (surrData.surroundingBlocks[side.s]) {
             let sideblock =
               REF_ALLCUBES.current[surrData.surroundingBlocks[side.s]];
             if (!blocktypes.floor.air.includes(sideblock.texture)) {
-              let newcord = (
-                camera.position[side.cord] +
-                vel[side.cordnum] / 60
-              ).toFixed(5);
+              let newcord =
+                pos.current[side.cordnum] + velArr[side.cordnum] * dt;
               let foundlimit =
                 sideblock.pos[side.cordnum] + (t + 0.3) * side.dir;
               if (
                 (newcord - foundlimit) * -1 * side.dir > 0 &&
-                vel[side.cordnum] * -1 * side.dir > 0
+                velArr[side.cordnum] * -1 * side.dir > 0
               ) {
-                vel[side.cordnum] = 0;
+                velArr[side.cordnum] = 0;
               }
             }
           }
         });
 
-        diags.forEach((side, ind) => {
+        diags.forEach((side) => {
           let virtaulboxgap = 0.1;
           let vbg = virtaulboxgap;
 
@@ -271,47 +228,40 @@ export const Player = ({
             let sideblock =
               REF_ALLCUBES.current[surrData.surroundingBlocks[side.s]];
             if (!blocktypes.floor.air.includes(sideblock.texture)) {
-              let newcordx = (camera.position["x"] + vel[0] / 60).toFixed(5);
-              let newcordz = (camera.position["z"] + vel[2] / 60).toFixed(5);
+              let newcordx = pos.current[0] + velArr[0] * dt;
+              let newcordz = pos.current[2] + velArr[2] * dt;
               let foundlimitx = sideblock.pos[0] + (t + vbg) * side.dirx;
               let foundlimitz = sideblock.pos[2] + (t + vbg) * side.dirz;
 
               if (
                 (newcordx - foundlimitx) * -1 * side.dirx > 0 &&
-                vel[0] * -1 * side.dirx > 0 &&
+                velArr[0] * -1 * side.dirx > 0 &&
                 (newcordz - foundlimitz) * -1 * side.dirz > 0
               ) {
-                vel[0] = 0;
+                velArr[0] = 0;
               }
               if (
                 (newcordz - foundlimitz) * -1 * side.dirz > 0 &&
-                vel[2] * -1 * side.dirz > 0 &&
+                velArr[2] * -1 * side.dirz > 0 &&
                 (newcordx - foundlimitx) * -1 * side.dirx > 0
               ) {
-                vel[2] = 0;
+                velArr[2] = 0;
               }
             }
           }
         });
       }
 
-      vel_x = vel[0];
-      vel_y = vel[1];
-      vel_z = vel[2];
-    } else {
-      console.log("YOUR FLYING!!!!! WOW");
+      vel_x = velArr[0];
+      vel_y = velArr[1];
+      vel_z = velArr[2];
     }
 
     return checkAbsoluteMapLimits([vel_x, vel_y, vel_z]);
   }
 
   function checkTerrain() {
-    let nearestblockspot = [...camera.position].map((val) => Math.round(val));
-    let nbs = nearestblockspot;
-    let topPlayerBlock = [...camera.position];
-    let tpb = topPlayerBlock;
-    let bottomPlayerBlock = [tpb[0], tpb[1] - 1, tpb[2]];
-    let bpb = bottomPlayerBlock;
+    let nbs = pos.current.map((val) => Math.round(val));
     let surroundingBlocks = {};
 
     surroundingBlocks.nbs = nbs;
@@ -353,19 +303,25 @@ export const Player = ({
       makeKey(nbs[0] - 1, nbs[1], nbs[2] + 1),
     );
 
-    return { tpb, bpb, surroundingBlocks };
+    return { surroundingBlocks };
   }
 
   function blockExists(block) {
     return block in REF_ALLCUBES.current ? block : "";
   }
 
-  function makeKey(x, y, z) {
-    return x + "." + y + "." + z;
-  }
-
   function isPlayerGivingInput() {
-    if (
+    if (settings.movewithJOY_BOOL) {
+      return (
+        moveBools.current.moveForward ||
+        moveBools.current.moveBackward ||
+        moveBools.current.moveLeft ||
+        moveBools.current.moveRight ||
+        moveBools.current.moveQuick ||
+        moveBools.current.jump
+      );
+    }
+    return (
       moveForward.on ||
       moveBackward.on ||
       moveLeft.on ||
@@ -373,100 +329,79 @@ export const Player = ({
       moveQuick.on ||
       moveDown.on ||
       jump.on
-    ) {
-      return true;
-    }
-    return false;
+    );
   }
 
-  // meant to help give the server a players location so other players can see where said player is
+  // give the server this players location so other players can see it
   function doOnlinePlayerPos() {
-    if (settings.onlineEnabled) {
-      if (socket.connected) {
-        online_sendPos(pos.current);
-      }
+    if (settings.onlineEnabled && socket && socket.connected) {
+      online_sendPos(pos.current);
     }
   }
 
-  //currently this is broken
   function doSightWithJoy() {
-    if (!settings.ignoreCameraFollowPlayer) {
-      camera.position.copy(
-        new Vector3(pos.current[0], pos.current[1], pos.current[2]),
-      );
+    if (settings.ignoreCameraFollowPlayer) {
+      return;
     }
 
-    if (!settings.ignoreCameraFollowPlayer) {
-      if (moveBools.current.camLeft || moveBools.current.camRight) {
-      }
-
-      let hor = moveBools.current.camLeft
-        ? 1
-        : moveBools.current.camRight
-          ? -1
-          : 0;
-      let ver = moveBools.current.camUp
-        ? 1
-        : moveBools.current.camDown
-          ? -1
-          : 0;
-      if (moveBools.current.camCenterTC > 2) {
-        moveBools.current.camCenterTC = 0;
-        rot.current = [...settings.startingRotationDefault, "YXZ"];
-      }
-      if (hor || ver || true) {
-        rot.current = [
-          (rot.current[0] += 0.01 * ver),
-          (rot.current[1] += 0.01 * hor),
-          rot.current[2],
-          "YXZ",
-          // THE ODER SHOULD ALLWAYS BE YAW-PITCH-ROLL
-        ];
-        rot.current.forEach((val, index) => {
-          if (index < 3) {
-            if (val > 2 * Math.PI) {
-              rot.current[index] -= 2 * Math.PI;
-            }
-            if (val < -2 * Math.PI) {
-              rot.current[index] += 2 * Math.PI;
-            }
-          }
-        });
-      }
-      camera.rotation.set(...rot.current);
+    let hor = moveBools.current.camLeft
+      ? 1
+      : moveBools.current.camRight
+        ? -1
+        : 0;
+    let ver = moveBools.current.camUp
+      ? 1
+      : moveBools.current.camDown
+        ? -1
+        : 0;
+    if (moveBools.current.camCenterTC > 2) {
+      moveBools.current.camCenterTC = 0;
+      rot.current = [...settings.startingRotationDefault, "YXZ"];
     }
+    rot.current = [
+      (rot.current[0] += 0.01 * ver),
+      (rot.current[1] += 0.01 * hor),
+      rot.current[2],
+      "YXZ",
+      // THE ORDER SHOULD ALWAYS BE YAW-PITCH-ROLL
+    ];
+    rot.current.forEach((val, index) => {
+      if (index < 3) {
+        if (val > 2 * Math.PI) {
+          rot.current[index] -= 2 * Math.PI;
+        }
+        if (val < -2 * Math.PI) {
+          rot.current[index] += 2 * Math.PI;
+        }
+      }
+    });
+    camera.rotation.set(...rot.current);
   }
 
-  useEffect(() => {
-    api.velocity.subscribe((v) => (vel.current = v));
-  }, [api.velocity]);
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, MAX_DT);
 
-  useEffect(() => {
-    api.position.subscribe((p) => {
-      pos.current = p;
-    });
-  }, [api.position]);
-
-  useFrame(() => {
-    if (setStartingRotationOnce.current) {
-      setStartingRotationOnce.current = false;
+    if (!initializedOnce.current) {
+      initializedOnce.current = true;
       camera.rotation.copy(
-        new Euler(...[...settings.startingRotationDefault, "YXZ"]),
+        new Euler(...settings.startingRotationDefault, "YXZ"),
       );
     }
-    // doOnlinePlayerPos()
-    settings.movewithJOY_BOOL ? doMovementWithJoy() : doMovement();
+
+    settings.movewithJOY_BOOL ? doMovementWithJoy(dt) : doMovement(dt);
+
+    // integrate position
+    pos.current[0] += vel.current[0] * dt;
+    pos.current[1] += vel.current[1] * dt;
+    pos.current[2] += vel.current[2] * dt;
+
+    // camera follows "player"
+    if (!settings.ignoreCameraFollowPlayer) {
+      camera.position.set(...pos.current);
+    }
+
+    doOnlinePlayerPos();
   });
 
-  return (
-    <>
-      {/* THIS IS WHERE THE PLAYER BODY 3JS should go */}
-      <mesh ref={ref}>
-        {/* <boxGeometry attach="geometry" args={[5,5,5]}/> */}
-        <sphereGeometry attach="geometry" args={[myRadius]} />
-        <meshStandardMaterial attach="material" color="orange" />
-      </mesh>
-      {settings.movewithJOY_BOOL ? <></> : <FPV />}
-    </>
-  );
+  return settings.movewithJOY_BOOL ? <></> : <FPV />;
 };

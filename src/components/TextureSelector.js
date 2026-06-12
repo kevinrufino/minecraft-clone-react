@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useStore } from "../hooks/useStore";
 import { dirtImg, grassImg, glassImg, logImg, woodImg } from "../images/images";
@@ -11,7 +11,9 @@ const images = {
   log: logImg,
 };
 
-export const TextureSelector = ({ activeTexturePatchFix }) => {
+const texturesArray = Object.keys(images);
+
+export const TextureSelector = ({ activeTextureREF }) => {
   const [activeTexture, setTexture] = useStore((state) => [
     state.texture,
     state.setTexture,
@@ -19,33 +21,34 @@ export const TextureSelector = ({ activeTexturePatchFix }) => {
   const { dirt, grass, glass, wood, log } = useKeyboard();
 
   useEffect(() => {
-    const textures = {
+    function pickTexture(texture) {
+      setTexture(texture);
+      activeTextureREF.current = texture;
+    }
+
+    const pressedTexture = Object.entries({
       dirt,
       grass,
       glass,
       wood,
       log,
-    };
+    }).find(([k, v]) => v.on);
 
-    const pressedTexture = Object.entries(textures).find(([k, v]) => v);
-
-    window.addEventListener("wheel", (event) => {
-      const texturesArray = ["dirt", "grass", "glass", "wood", "log"];
+    function handleWheel(event) {
       const delta = Math.sign(event.deltaY);
-      let arrayPos = texturesArray.indexOf(activeTexture);
-      if (delta === -1 && arrayPos - 1 > -1) {
-        setTexture(texturesArray[arrayPos - 1]);
-        activeTexturePatchFix.current = texturesArray[arrayPos - 1];
+      const nextPos = texturesArray.indexOf(activeTexture) + delta;
+      if (nextPos >= 0 && nextPos < texturesArray.length) {
+        pickTexture(texturesArray[nextPos]);
       }
-      if (delta === 1 && arrayPos + 1 < 5) {
-        setTexture(texturesArray[arrayPos + 1]);
-        activeTexturePatchFix.current = texturesArray[arrayPos + 1];
-      }
-    });
-    if (pressedTexture) {
-      setTexture(pressedTexture[0]);
-      activeTexturePatchFix.current = pressedTexture[0];
     }
+
+    window.addEventListener("wheel", handleWheel);
+    if (pressedTexture) {
+      pickTexture(pressedTexture[0]);
+    }
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+    };
   }, [setTexture, dirt, grass, glass, wood, log, activeTexture]);
 
   return (

@@ -1,24 +1,8 @@
 const TitleScreen = ({ playerGivenGameSettings }) => {
-  //@TODO: so this click basically updates the the settings and checks if player is playing on mobile? We can move this into a hook and refactor the play with bool logic for a cleaner setup
   function handleClickPlay() {
-    console.log("FromClickingPlay:", { width: window.innerWidth });
-    let settingChanges = {};
-    settingChanges.movewithJOY_BOOL = window.innerWidth < 400;
-
-    playerGivenGameSettings(settingChanges);
+    // small screens get the touch joystick controls
+    playerGivenGameSettings({ movewithJOY_BOOL: window.innerWidth < 400 });
   }
-
-  let svginfo = {};
-  svginfo.sqauresize = 16;
-  svginfo.pixelsize =
-    Math.floor(window.innerWidth / svginfo.sqauresize) <
-    Math.floor(window.innerHeight / svginfo.sqauresize)
-      ? Math.floor(window.innerWidth / svginfo.sqauresize)
-      : Math.floor(window.innerHeight / svginfo.sqauresize);
-  svginfo.hor_offset =
-    (window.innerWidth - svginfo.sqauresize * svginfo.pixelsize) / 2;
-  svginfo.vert_offset =
-    (window.innerHeight - svginfo.sqauresize * svginfo.pixelsize) / 2;
 
   return (
     <>

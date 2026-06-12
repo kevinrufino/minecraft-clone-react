@@ -1,5 +1,3 @@
-//@TODO: I hate this name but couldn't come up with a better one
-import { Physics } from "@react-three/cannon";
 import { PerformanceMonitor, Sky, Stats } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { TextureSelector } from "./TextureSelector";
@@ -11,7 +9,7 @@ import { OrbitControls } from "@react-three/drei";
 import { LoadingWorldScreen } from "./UIComponents/LoadingWorldScreen";
 import LowerControlStrip from "../hooks/LowerControlStrip";
 import { useRef, useState } from "react";
-import { useControls, button } from "leva";
+import { useControls } from "leva";
 
 const CoreGame = () => {
   let moveBools = useRef({
@@ -44,7 +42,7 @@ const CoreGame = () => {
     initWorld: 0,
   });
 
-  // @TODO: use this for debugging live, lets update the constants file and other states that we want to tweak live from here
+  // live debug panel -- tweak render toggles here while playing
   const {
     showUIContent,
     showTextureSelector,
@@ -52,19 +50,15 @@ const CoreGame = () => {
     showSky,
     orbitalControlsEnabled,
   } = useControls({
-    // minDistance: { value: 0 },
-    testBUtton: button(() => console.log("test button clicked")),
     showUIContent: { value: false, label: "show UI content" },
     showTextureSelector: { value: false, label: "show texture selector" },
     showFPS: { value: true, label: "show FPS" },
-    showSky: { value: false, label: "show sky" },
+    showSky: { value: true, label: "show sky" },
     orbitalControlsEnabled: { value: false, label: "orbital controls" },
   });
 
-  const movewithJOY_BOOL = true; //@TODO: Should we just get this from settings.movewithJOY_BOOL
-
   function updateInitStatus(obj) {
-    setInitStatus({ ...initStatus.current, ...obj });
+    setInitStatus((prev) => ({ ...prev, ...obj }));
   }
   return (
     <>
@@ -88,16 +82,13 @@ const CoreGame = () => {
         />
         {showSky && <Sky name={"skyMesh"} sunPosition={[100, 100, 20]} />}
         <ambientLight intensity={0.5} />
-        <Physics>
-          <Scene
-            activeTextureREF={activeTextureREF}
-            updateInitStatus={updateInitStatus}
-            initStatus={initStatus}
-            chunksMadeCounter={chunksMadeCounter}
-            moveBools={moveBools}
-            movewithJOY_BOOL={movewithJOY_BOOL}
-          />
-        </Physics>
+        <Scene
+          activeTextureREF={activeTextureREF}
+          updateInitStatus={updateInitStatus}
+          initStatus={initStatus}
+          chunksMadeCounter={chunksMadeCounter}
+          moveBools={moveBools}
+        />
 
         {orbitalControlsEnabled && <OrbitControls />}
         <axesHelper name={"axesHelper"} scale={10} />

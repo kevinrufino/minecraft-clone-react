@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { Chunk } from "./Chunk";
 import { useFrame, useThree } from "@react-three/fiber";
 import settings from "../../constants";
+import {
+  chunkIdFromPosition,
+  distBetweenChunks,
+  getNearbyChunkIds,
+} from "../../world/chunkMath";
 
 export const Cubes = ({
   activeTextureREF,
   REF_ALLCUBES,
   updateInitStatus,
-  initStatus,
   chunksMadeCounter,
 }) => {
   const { camera } = useThree();
@@ -47,7 +51,9 @@ export const Cubes = ({
   const playerChunkPosition = useRef(-1);
 
   const buildWorker = (id) => {
-    const worker = new Worker("./dist/publicChunkWorker.js"); // task code in public folder
+    const worker = new Worker(
+      new URL("../../workers/chunkWorker.js", import.meta.url),
+    );
     worker.onerror = (err) => {
       console.log("myWorker Error:", err);
     };
@@ -73,19 +79,6 @@ export const Cubes = ({
     return worker;
   };
 
-  function calcChunkXandYFromId(id) {
-    let ws = settings.worldSettings.worldSize;
-    let y = Math.floor(id / ws);
-    let x = id - y * ws;
-    return { x, y };
-  }
-
-  function calcDistBetweenChunksFromIds(l, r) {
-    let a = calcChunkXandYFromId(l);
-    let b = calcChunkXandYFromId(r);
-    return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
-  }
-
   function handleWorkerUserChangeResponse(data) {
     let { vertices, uvs, normals, count, chunkNumber } = data;
     vertices = new Float32Array(vertices);
@@ -102,7 +95,7 @@ export const Cubes = ({
   }
 
   function handleWorkerWorldFillResponse(worldFiller) {
-    REF_ALLCUBES.current = { ...REF_ALLCUBES.current, ...worldFiller.ac };
+    Object.assign(REF_ALLCUBES.current, worldFiller.ac);
 
     worldFiller.chunkNumbers.forEach((cn) => {
       chunks.current[cn] = worldFiller.testor[cn];
@@ -119,7 +112,11 @@ export const Cubes = ({
   function giveWorkerUserChangeJob(workerId, chunkinfo) {
     let chunkNumber = chunkinfo;
     let t = 0.5;
-    let adjacentchunks = getListOfNearByChunksById(chunkNumber, 1);
+    let adjacentchunks = getNearbyChunkIds(
+      chunkNumber,
+      1,
+      worldSettings.worldSize,
+    );
     let neededblocks = {};
     adjacentchunks.forEach((cn) => {
       chunks.current[cn].keys.forEach((bn) => {
@@ -191,22 +188,24 @@ export const Cubes = ({
   }
 
   useFrame(() => {
-    let px = camera.position.x;
-    let pz = camera.position.z;
-    let wS = worldSettings.worldSize;
-    let cS = worldSettings.chunkSize;
-    let pChunk = wS * Math.floor(px / cS) + Math.floor(pz / cS);
+    const pChunk = chunkIdFromPosition(
+      camera.position.x,
+      camera.position.z,
+      worldSettings,
+    );
 
     if (
       playerChunkPosition.current !== pChunk &&
       chunksMadeCounter.current.loaddone &&
       FillerLoadDoneValue
     ) {
-      console.log({ pChunk, px, pz, wS, cS });
       playerChunkPosition.current = pChunk;
-      console.log({ pChunk });
       if (
-        calcDistBetweenChunksFromIds(lastRenderChunk.current, pChunk) >=
+        distBetweenChunks(
+          lastRenderChunk.current,
+          pChunk,
+          worldSettings.worldSize,
+        ) >=
         renderDistPrecentage * (outerViewRadius - viewRadius)
       ) {
         checkWorldFilledRadius(pChunk);
@@ -225,46 +224,37 @@ export const Cubes = ({
           init: { worldSettings: { ...worldSettings, w_ind: ind } },
         });
       });
-      updateInitStatus({ ...initStatus, buildWorkers: workersmade });
+      updateInitStatus({ buildWorkers: workersmade });
     }
     // triggering world fill once
     if (workerList.current[0] && !chunksMadeCounter.current.loaddone) {
-      let ourCurrentChunk = settings.startingChunk;
-      let worldFillarr = getListOfNearByChunksById(
+      const ourCurrentChunk = settings.startingChunk;
+      // fill closest chunks first so the area around the player loads first
+      const worldFillarr = getNearbyChunkIds(
         ourCurrentChunk,
         outerViewRadius,
+        worldSettings.worldSize,
+      ).sort(
+        (a, b) =>
+          distBetweenChunks(ourCurrentChunk, a, worldSettings.worldSize) -
+          distBetweenChunks(ourCurrentChunk, b, worldSettings.worldSize),
       );
-      let ws = worldSettings.worldSize;
-      let worldFillarrsort = worldFillarr.map((val) => {
-        let ay = Math.floor(val / ws);
-        let ax = val - ay * ws;
-        let by = Math.floor(ourCurrentChunk / ws);
-        let bx = ourCurrentChunk - by * ws;
-        let chunkDist = ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5;
-        return { val, dist: chunkDist };
-      });
-      worldFillarrsort.sort((a, b) => {
-        return a.dist - b.dist;
-      });
-      worldFillarr = worldFillarrsort.map((a) => {
-        return a.val;
-      });
-      let batchnum = Math.floor(worldFillarr.length / fillBatchSize);
-      if (worldFillarr.length % fillBatchSize > 0) {
-        batchnum++;
-      }
-
-      for (let i = 0; i < batchnum; i++) {
-        let chunkinfo = {
-          arr: worldFillarr.slice(fillBatchSize * i, fillBatchSize * (i + 1)),
-        };
-        addWorkerJob(chunkinfo, "worldFill");
-      }
+      queueWorldFillBatches(worldFillarr);
     }
   }, []);
 
+  function queueWorldFillBatches(chunkIds) {
+    for (let i = 0; i < chunkIds.length; i += fillBatchSize) {
+      addWorkerJob({ arr: chunkIds.slice(i, i + fillBatchSize) }, "worldFill");
+    }
+  }
+
   function updateDisplayedChunks(currentChunk) {
-    let chunksToDisplay = getListOfNearByChunksById(currentChunk, viewRadius);
+    let chunksToDisplay = getNearbyChunkIds(
+      currentChunk,
+      viewRadius,
+      worldSettings.worldSize,
+    );
     let removeChunks = activeChunks.current.filter((id) => {
       return !chunksToDisplay.includes(id);
     });
@@ -282,54 +272,14 @@ export const Cubes = ({
 
   function checkWorldFilledRadius(currentChunk) {
     lastRenderChunk.current = playerChunkPosition.current;
-    let chunksTofill = getListOfNearByChunksById(currentChunk, outerViewRadius);
-    chunksTofill = chunksTofill.filter((cn) => {
+    const chunksTofill = getNearbyChunkIds(
+      currentChunk,
+      outerViewRadius,
+      worldSettings.worldSize,
+    ).filter((cn) => {
       return !chunks.current[cn].count;
     });
-    if (chunksTofill.length) {
-      let batchnum = Math.floor(chunksTofill.length / fillBatchSize);
-      if (chunksTofill.length % fillBatchSize > 0) {
-        batchnum++;
-      }
-      for (let i = 0; i < batchnum; i++) {
-        let chunkinfo = {
-          arr: chunksTofill.slice(fillBatchSize * i, fillBatchSize * (i + 1)),
-        };
-        addWorkerJob(chunkinfo, "worldFill");
-      }
-    }
-  }
-
-  function getListOfNearByChunksById(currentchunk, radius) {
-    let ws = worldSettings.worldSize;
-    let nearby = [];
-    let ccy = Math.floor(currentchunk / ws);
-    let ccx = currentchunk - ccy * ws;
-
-    for (let x = -radius; x <= radius; x++) {
-      for (let y = -radius; y <= radius; y++) {
-        let ans = currentchunk + ws * y + x;
-        //out of map edge
-        if (ans < 0 || ans >= ws * ws) {
-          continue;
-        }
-
-        let ansy = Math.floor(ans / ws);
-        let ansx = ans - ansy * ws;
-
-        //out of view
-        let chunkDist = ((ansx - ccx) ** 2 + (ansy - ccy) ** 2) ** 0.5;
-        if (chunkDist > radius) {
-          continue;
-        }
-
-        nearby.push(ans);
-      }
-    }
-
-    nearby = new Array(...new Set(nearby));
-
-    return nearby;
+    queueWorldFillBatches(chunksTofill);
   }
 
   function showChunks() {
