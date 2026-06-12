@@ -24,12 +24,16 @@ function generateClouds() {
     const boxCount = Math.floor(rand() * 4) + 2; // 2-5 boxes
     const boxes = [];
 
+    // lay boxes side by side along x (never overlapping -- overlapping
+    // translucent boxes z-fight and show their internal faces)
+    let cursor = 0;
     for (let b = 0; b < boxCount; b++) {
-      const w = 8 + rand() * 8;   // 8-16
+      const w = 6 + rand() * 8; // 6-14
       const h = 0.4;
-      const d = 6 + rand() * 6;   // 6-12
-      const ox = (rand() - 0.5) * 10;
-      const oz = (rand() - 0.5) * 8;
+      const d = 6 + rand() * 6; // 6-12
+      const ox = cursor + w / 2;
+      const oz = 0;
+      cursor += w + 0.05; // hairline gap kills coplanar-face shimmer
       boxes.push({ w, h, d, ox, oz });
     }
 
@@ -43,6 +47,7 @@ const cloudMaterial = new THREE.MeshBasicMaterial({
   color: "white",
   transparent: true,
   opacity: 0.75,
+  depthWrite: false, // translucent clouds shouldn't occlude each other
 });
 
 export function Clouds() {

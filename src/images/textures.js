@@ -24,6 +24,10 @@ glassTexture.magFilter = NearestFilter;
 woodTexture.magFilter = NearestFilter;
 groundTexture.magFilter = NearestFilter;
 allMincraftTexture.magFilter = NearestFilter;
+// nearest min filter + no mipmaps stops atlas tiles bleeding into each
+// other at block edges (the faint grid "outline" on sand/wood)
+allMincraftTexture.minFilter = NearestFilter;
+allMincraftTexture.generateMipmaps = false;
 groundTexture.wrapS = RepeatWrapping;
 groundTexture.wrapT = RepeatWrapping;
 

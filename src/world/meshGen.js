@@ -7,24 +7,17 @@ import {
   FACE_SHADE,
 } from "./atlas";
 
+// inset UVs by a sliver of a texel so samples never bleed into the
+// neighboring atlas tile
+const UV_EPS = ATLAS_UV_SIZE / 64;
+
 function faceUVs(texture, face) {
   const [col, row] = tileFor(texture, face);
-  const uvL = (col - 1) * ATLAS_UV_SIZE;
-  const uvB = (row - 1) * ATLAS_UV_SIZE;
-  return [
-    uvL + ATLAS_UV_SIZE,
-    uvB + 0,
-    uvL + ATLAS_UV_SIZE,
-    uvB + ATLAS_UV_SIZE,
-    uvL + 0,
-    uvB + 0,
-    uvL + 0,
-    uvB + 0,
-    uvL + ATLAS_UV_SIZE,
-    uvB + ATLAS_UV_SIZE,
-    uvL + 0,
-    uvB + ATLAS_UV_SIZE,
-  ];
+  const uvL = (col - 1) * ATLAS_UV_SIZE + UV_EPS;
+  const uvR = col * ATLAS_UV_SIZE - UV_EPS;
+  const uvB = (row - 1) * ATLAS_UV_SIZE + UV_EPS;
+  const uvT = row * ATLAS_UV_SIZE - UV_EPS;
+  return [uvR, uvB, uvR, uvT, uvL, uvB, uvL, uvB, uvR, uvT, uvL, uvT];
 }
 
 function isTransparent(texture) {

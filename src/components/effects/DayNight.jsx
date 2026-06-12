@@ -3,7 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import * as THREE from "three";
 
-const DAY_LENGTH_S = 240; // full day/night cycle
+const DAY_LENGTH_S = 2400; // full day/night cycle (40 min)
 const DAY_FOG = new THREE.Color("#d7e7f5");
 const NIGHT_FOG = new THREE.Color("#070b14");
 

@@ -185,31 +185,60 @@ function initialFill({ chunks, edits }) {
       }
     }
 
-    fillRes[ck] = { info, infoList };
+    // a 1-block ring of neighbor terrain, used only for face culling so
+    // chunk-border faces don't render (terrain is deterministic, so this
+    // matches whatever the neighbor chunk actually contains)
+    const marginInfo = {};
+    const marginList = [];
+    for (let x = x0 - 1; x < x0 + cS + 1; x++) {
+      for (let z = z0 - 1; z < z0 + cS + 1; z++) {
+        if (x >= x0 && x < x0 + cS && z >= z0 && z < z0 + cS) {
+          continue;
+        }
+        columnBlocks(x, z, marginInfo, marginList);
+      }
+    }
+
+    fillRes[ck] = { info, infoList, marginInfo, x0, z0 };
   });
 
   // overlay player edits (adds/removes recorded against generated terrain)
   if (edits) {
-    const chunkSet = {};
-    chunks.forEach((ck) => {
-      chunkSet[ck] = fillRes[ck];
-    });
     Object.entries(edits).forEach(([blockKey, event]) => {
-      const cx = Math.floor(event.pos[0] / cS);
-      const cz = Math.floor(event.pos[2] / cS);
-      const res = chunkSet[cx + "." + cz];
-      if (!res) {
-        return;
-      }
-      if (event.type === "add") {
-        if (!res.info[blockKey]) {
-          res.infoList.push(blockKey);
+      const [ex, , ez] = event.pos;
+      chunks.forEach((ck) => {
+        const res = fillRes[ck];
+        const inChunk =
+          ex >= res.x0 && ex < res.x0 + cS && ez >= res.z0 && ez < res.z0 + cS;
+        const inMargin =
+          !inChunk &&
+          ex >= res.x0 - 1 &&
+          ex < res.x0 + cS + 1 &&
+          ez >= res.z0 - 1 &&
+          ez < res.z0 + cS + 1;
+
+        if (inChunk) {
+          if (event.type === "add") {
+            if (!res.info[blockKey]) {
+              res.infoList.push(blockKey);
+            }
+            res.info[blockKey] = { pos: event.pos, texture: event.texture };
+          } else if (event.type === "remove" && res.info[blockKey]) {
+            delete res.info[blockKey];
+            res.infoList.splice(res.infoList.indexOf(blockKey), 1);
+          }
+        } else if (inMargin) {
+          // keep the culling ring in sync with edited neighbor terrain
+          if (event.type === "add") {
+            res.marginInfo[blockKey] = {
+              pos: event.pos,
+              texture: event.texture,
+            };
+          } else if (event.type === "remove") {
+            delete res.marginInfo[blockKey];
+          }
         }
-        res.info[blockKey] = { pos: event.pos, texture: event.texture };
-      } else if (event.type === "remove" && res.info[blockKey]) {
-        delete res.info[blockKey];
-        res.infoList.splice(res.infoList.indexOf(blockKey), 1);
-      }
+      });
     });
   }
 
@@ -220,9 +249,9 @@ function initialFill({ chunks, edits }) {
 function initialRenders(fillRes, chunkKeys) {
   const t = 0.5;
 
-  const blocks = {};
+  const allBlocks = {};
   chunkKeys.forEach((ck) => {
-    Object.assign(blocks, fillRes[ck].info);
+    Object.assign(allBlocks, fillRes[ck].info);
   });
 
   chunkKeys.forEach((ck) => {
@@ -231,7 +260,10 @@ function initialRenders(fillRes, chunkKeys) {
       count: fillRes[ck].infoList.length,
     };
 
-    const draw = packDrawArrays(genFaceArrays(t, blocks, chunkBlocks));
+    // mesh against own blocks + the deterministic neighbor ring so faces on
+    // chunk borders cull correctly no matter which batch the neighbor is in
+    const cullBlocks = { ...fillRes[ck].marginInfo, ...fillRes[ck].info };
+    const draw = packDrawArrays(genFaceArrays(t, cullBlocks, chunkBlocks));
 
     fillRes[ck] = {
       keys: fillRes[ck].infoList,
@@ -240,5 +272,5 @@ function initialRenders(fillRes, chunkKeys) {
       draw: { rere: false, ...draw },
     };
   });
-  return [blocks, fillRes];
+  return [allBlocks, fillRes];
 }

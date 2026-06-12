@@ -126,10 +126,15 @@ export const Cubes = ({
   }
 
   function giveWorkerWorldFillJob(workerId, chunkinfo) {
+    // include neighbor chunks' edits so the culling margin sees them too
+    const withNeighbors = new Set();
+    chunkinfo.arr.forEach((ck) => {
+      getNearbyChunkKeys(ck, 1.5).forEach((n) => withNeighbors.add(n));
+    });
     workerList.current[workerId].postMessage({
       worldFill: {
         chunks: chunkinfo.arr,
-        edits: editsForChunks(chunkinfo.arr, worldSettings.chunkSize),
+        edits: editsForChunks([...withNeighbors], worldSettings.chunkSize),
       },
     });
   }
