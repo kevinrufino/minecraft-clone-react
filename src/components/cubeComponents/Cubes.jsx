@@ -21,8 +21,8 @@ export const Cubes = ({
   const { camera } = useThree();
   const [FillerLoadDoneValue, setFillerLoadDone] = useState(false);
   const [chunkKeyList, setChunkKeyList] = useState([]);
-  const viewRadius = settings.viewRadius; //distance (in chunks) chunks are shown
-  const outerViewRadius = settings.outerViewRadius; //distance (in chunks) we ensure are built
+  // view radii are read from settings on every use -- CoreGame adjusts them
+  // live based on measured performance
   const fillBatchSize = settings.fillBatchSize; // chunks allowed per worker job
   const worldSettings = settings.worldSettings;
   const renderDistPrecentage = settings.renderDistPrecentage;
@@ -73,6 +73,10 @@ export const Cubes = ({
     return worker;
   };
 
+  // monotonic revision so every re-mesh remounts its geometry -- reusing a
+  // bufferGeometry with different-sized arrays corrupts/blanks the mesh
+  const meshRev = useRef(0);
+
   function handleWorkerUserChangeResponse(data) {
     const { draw, count, chunkKey } = data;
     if (!chunks.current[chunkKey]) {
@@ -80,6 +84,7 @@ export const Cubes = ({
     }
     chunks.current[chunkKey].draw = {
       cc: count,
+      rev: ++meshRev.current,
       solid: draw.solid,
       trans: draw.trans,
       rere: true,
@@ -126,10 +131,15 @@ export const Cubes = ({
   }
 
   function giveWorkerWorldFillJob(workerId, chunkinfo) {
+    // include neighbor chunks' edits so the culling margin sees them too
+    const withNeighbors = new Set();
+    chunkinfo.arr.forEach((ck) => {
+      getNearbyChunkKeys(ck, 1.5).forEach((n) => withNeighbors.add(n));
+    });
     workerList.current[workerId].postMessage({
       worldFill: {
         chunks: chunkinfo.arr,
-        edits: editsForChunks(chunkinfo.arr, worldSettings.chunkSize),
+        edits: editsForChunks([...withNeighbors], worldSettings.chunkSize),
       },
     });
   }
@@ -184,10 +194,79 @@ export const Cubes = ({
     }
   }
 
+  // ---- water flow (Minecraft-style, simplified) ----
+  // Water spreads down freely and sideways up to FLOW_RANGE cells. The queue
+  // holds positions to examine; only cells that are water act. Every path
+  // that changes blocks feeds it, so remote players' digs flow too.
+  const FLOW_RANGE = 4;
+  const flowQueue = useRef([]);
+  const lastFlowTick = useRef(0);
+
+  function enqueueFlowAround(pos) {
+    const [x, y, z] = pos;
+    flowQueue.current.push(
+      [x + 1, y, z],
+      [x - 1, y, z],
+      [x, y, z + 1],
+      [x, y, z - 1],
+      [x, y + 1, z],
+    );
+  }
+
+  function tickWaterFlow() {
+    const now = performance.now();
+    if (!flowQueue.current.length || now - lastFlowTick.current < 200) {
+      return;
+    }
+    lastFlowTick.current = now;
+    const batch = flowQueue.current.splice(0, 64);
+    batch.forEach(([x, y, z]) => {
+      const cell = REF_ALLCUBES.current[makeKey(x, y, z)];
+      if (!cell || cell.texture !== "water") {
+        return;
+      }
+      const flow = cell.flow ?? FLOW_RANGE; // generated water is a source
+      const belowKey = makeKey(x, y - 1, z);
+      if (!REF_ALLCUBES.current[belowKey] && y - 1 > worldSettings.minY) {
+        // falling water keeps full strength
+        applyBlockChange({
+          type: "add",
+          pos: [x, y - 1, z],
+          texture: "water",
+          flow: FLOW_RANGE,
+        });
+      } else if (flow > 1) {
+        [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ].forEach(([dx, dz]) => {
+          if (!REF_ALLCUBES.current[makeKey(x + dx, y, z + dz)]) {
+            applyBlockChange({
+              type: "add",
+              pos: [x + dx, y, z + dz],
+              texture: "water",
+              flow: flow - 1,
+            });
+          }
+        });
+      }
+    });
+  }
+
   // Single entry point for every block mutation: local clicks, remote
   // players, and persisted-edit replay all flow through here.
   function applyBlockChange(event) {
     recordEdit(event, !settings.onlineEnabled);
+
+    if (event.type === "remove") {
+      // neighboring water may flow into the new hole
+      enqueueFlowAround(event.pos);
+    } else if (event.texture === "water") {
+      // newly placed/flowed water may keep spreading
+      flowQueue.current.push([...event.pos]);
+    }
 
     const ck = chunkKeyFromPosition(
       event.pos[0],
@@ -206,7 +285,11 @@ export const Cubes = ({
       if (existing && existing.texture !== "water") {
         return;
       }
-      REF_ALLCUBES.current[key] = { pos: event.pos, texture: event.texture };
+      REF_ALLCUBES.current[key] = {
+        pos: event.pos,
+        texture: event.texture,
+        ...(event.flow != null && { flow: event.flow }),
+      };
       if (!existing) {
         chunk.keys.push(key);
         chunk.count++;
@@ -261,25 +344,48 @@ export const Cubes = ({
     return missing.length;
   }
 
+  const lastRadius = useRef(settings.viewRadius);
+
   useFrame(() => {
+    if (process.env.NODE_ENV === "development") {
+      window.__chunkDebug = {
+        chunks: Object.keys(chunks.current).length,
+        visible: Object.values(chunks.current).filter((c) => c.visible).length,
+        rendered: chunkKeyList.length,
+        radius: settings.viewRadius,
+        pending: pendingFill.current.size,
+        queue: workerPendingJob.current.length,
+        pChunk: playerChunkPosition.current,
+      };
+    }
     const pChunk = chunkKeyFromPosition(
       camera.position.x,
       camera.position.z,
       worldSettings.chunkSize,
     );
 
-    if (
-      playerChunkPosition.current !== pChunk &&
-      chunksMadeCounter.current.loaddone &&
-      FillerLoadDoneValue
-    ) {
+    if (!chunksMadeCounter.current.loaddone || !FillerLoadDoneValue) {
+      return;
+    }
+
+    tickWaterFlow();
+
+    // performance tuning changed the render distance
+    if (lastRadius.current !== settings.viewRadius) {
+      lastRadius.current = settings.viewRadius;
+      fillMissingChunks(pChunk, settings.outerViewRadius);
+      updateDisplayedChunks(pChunk);
+    }
+
+    if (playerChunkPosition.current !== pChunk) {
       playerChunkPosition.current = pChunk;
       if (
         distBetweenChunks(lastRenderChunk.current, pChunk) >=
-        renderDistPrecentage * (outerViewRadius - viewRadius)
+        renderDistPrecentage *
+          (settings.outerViewRadius - settings.viewRadius)
       ) {
         lastRenderChunk.current = pChunk;
-        fillMissingChunks(pChunk, outerViewRadius);
+        fillMissingChunks(pChunk, settings.outerViewRadius);
       }
       updateDisplayedChunks(pChunk);
     }
@@ -306,7 +412,7 @@ export const Cubes = ({
     }
     // initial world fill around spawn
     if (workerList.current[0] && !chunksMadeCounter.current.loaddone) {
-      const queued = fillMissingChunks(spawnChunk, outerViewRadius);
+      const queued = fillMissingChunks(spawnChunk, settings.outerViewRadius);
       chunksMadeCounter.current.track.max = queued;
     }
 
@@ -315,7 +421,10 @@ export const Cubes = ({
   }, []);
 
   function updateDisplayedChunks(currentChunk) {
-    const chunksToDisplay = getNearbyChunkKeys(currentChunk, viewRadius);
+    const chunksToDisplay = getNearbyChunkKeys(
+      currentChunk,
+      settings.viewRadius,
+    );
     const removeChunks = activeChunks.current.filter((ck) => {
       return !chunksToDisplay.includes(ck);
     });

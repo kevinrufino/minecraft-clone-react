@@ -31,14 +31,23 @@ export const LoadingWorldScreen = ({ buildWorkers, chunksMadeCounter }) => {
     };
   }, []); // chunksMadeCounter is a stable ref — no dep needed
 
-  // When loaddone goes true, start the fade-out then unmount
+  // When loaddone goes true, start the fade-out
   useEffect(() => {
     if (chunksMadeCounter.current.loaddone && !fadeOut) {
       setFadeOut(true);
+    }
+  });
+
+  // Separate effect keyed on fadeOut: the unmount timer must survive
+  // re-renders (an effect without deps re-runs every render and its cleanup
+  // cancels the timer -- the screen then sits invisible forever, blocking
+  // every click on the page)
+  useEffect(() => {
+    if (fadeOut) {
       const t = setTimeout(() => setVisible(false), 600);
       return () => clearTimeout(t);
     }
-  });
+  }, [fadeOut]);
 
   if (!visible) return null;
 

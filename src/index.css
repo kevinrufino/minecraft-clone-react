@@ -410,6 +410,8 @@ body {
 
 .loading-screen--fade {
   animation: loading-fade-out 0.6s ease forwards;
+  /* the instant the fade starts, clicks must pass through to the game */
+  pointer-events: none;
 }
 
 .loading-screen__overlay {
