@@ -15,7 +15,7 @@ function App() {
 
   if (!establishedConn) {
     //waiting screen while connecting to the online server
-    return <div>Getting World</div>;
+    return <div>Connecting to multiplayer server...</div>;
   }
 
   return playerConfigReady ? (

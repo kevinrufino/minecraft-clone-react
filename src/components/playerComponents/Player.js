@@ -332,10 +332,18 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     );
   }
 
-  // give the server this players location so other players can see it
+  // give the server this players location so other players can see it,
+  // throttled so we don't emit on every frame
+  const lastPosSend = useRef(0);
+  const POS_SEND_INTERVAL_MS = 66; // ~15 updates/sec
+
   function doOnlinePlayerPos() {
     if (settings.onlineEnabled && socket && socket.connected) {
-      online_sendPos(pos.current);
+      const now = performance.now();
+      if (now - lastPosSend.current >= POS_SEND_INTERVAL_MS) {
+        lastPosSend.current = now;
+        online_sendPos(pos.current);
+      }
     }
   }
 
@@ -401,6 +409,12 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     }
 
     doOnlinePlayerPos();
+
+    if (process.env.NODE_ENV === "development") {
+      window.__playerPos = [...pos.current];
+      window.__camDir = camera.getWorldDirection(new Vector3()).toArray();
+      window.__camera = camera;
+    }
   });
 
   return settings.movewithJOY_BOOL ? <></> : <FPV />;

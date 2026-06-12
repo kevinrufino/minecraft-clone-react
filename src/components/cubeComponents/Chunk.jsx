@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { useState } from "react";
 import settings from "../../constants";
 import { makeKey } from "../../world/keys";
+import { useStore } from "../../hooks/useStore";
 
 export const Chunk = ({
   chunkNum,
@@ -14,6 +15,10 @@ export const Chunk = ({
   addWorkerJob,
 }) => {
   const { camera, scene } = useThree();
+  const [online_addCube, online_removeCube] = useStore((state) => [
+    state.online_addCube,
+    state.online_removeCube,
+  ]);
   const chunkTrackBlockCount = useRef(0);
   const chunkTrackVisibility = useRef(false);
   const [updateChunk, setUpdateChunk] = useState(false);
@@ -62,6 +67,9 @@ export const Chunk = ({
         currBlocks[newblock.key] = { pos: newblock.pos, texture: currTexture };
         chunkProps.current[chunkNum].keys.push(newblock.key);
         chunkProps.current[chunkNum].count++;
+        if (settings.onlineEnabled) {
+          online_addCube(newblock.pos, currTexture);
+        }
       }
 
       if (e.button === 2) {
@@ -77,6 +85,9 @@ export const Chunk = ({
           keys.pop();
         }
         chunkProps.current[chunkNum].count--;
+        if (settings.onlineEnabled) {
+          online_removeCube(contactBlock);
+        }
       }
     }
   }

@@ -24,11 +24,15 @@ That's it — the chunk worker is bundled automatically by react-scripts.
 
 ### Multiplayer
 
-Online play is disabled by default (`onlineEnabled` in `src/constants.js`).
+Online play is on by default (`onlineEnabled` in `src/constants.js`). On
+startup the game tries the server for ~6 seconds and falls back to single
+player if it can't connect. Player positions and block changes are synced;
+blocks placed before you joined are replayed when you connect.
+
 The server lives at
-[GreyDaCaLa/ReactMineCraftCloneServer](https://github.com/GreyDaCaLa/ReactMineCraftCloneServer)
-and is expected on `localhost:5000`, or set `useRemoteServer: true` to use the
-deployed instance.
+[GreyDaCaLa/ReactMineCraftCloneServer](https://github.com/GreyDaCaLa/ReactMineCraftCloneServer).
+Run it locally with `npm install && node server.js` (port 5000), or set
+`useRemoteServer: true` to use the deployed instance.
 
 ### Known potential bugs
 

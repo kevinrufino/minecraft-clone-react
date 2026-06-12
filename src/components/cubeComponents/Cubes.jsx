@@ -7,6 +7,8 @@ import {
   distBetweenChunks,
   getNearbyChunkIds,
 } from "../../world/chunkMath";
+import { makeKey } from "../../world/keys";
+import { setRemoteBlockApplier } from "../../world/remoteBlocks";
 
 export const Cubes = ({
   activeTextureREF,
@@ -248,6 +250,47 @@ export const Cubes = ({
       addWorkerJob({ arr: chunkIds.slice(i, i + fillBatchSize) }, "worldFill");
     }
   }
+
+  // apply block changes made by other online players
+  useEffect(() => {
+    if (!FillerLoadDoneValue) {
+      return;
+    }
+    setRemoteBlockApplier((event) => {
+      const [x, , z] = event.pos;
+      const cn = chunkIdFromPosition(x, z, worldSettings);
+      const chunk = chunks.current[cn];
+      if (cn < 0 || cn >= chunks.current.length || !chunk || !chunk.keys) {
+        return;
+      }
+
+      const key = makeKey(...event.pos);
+      if (event.type === "add") {
+        if (key in REF_ALLCUBES.current) {
+          return;
+        }
+        REF_ALLCUBES.current[key] = {
+          pos: event.pos,
+          texture: event.texture || "dirt",
+        };
+        chunk.keys.push(key);
+        chunk.count++;
+      } else if (event.type === "remove") {
+        if (!(key in REF_ALLCUBES.current)) {
+          return;
+        }
+        delete REF_ALLCUBES.current[key];
+        const i = chunk.keys.indexOf(key);
+        if (i !== -1) {
+          chunk.keys[i] = chunk.keys[chunk.keys.length - 1];
+          chunk.keys.pop();
+        }
+        chunk.count--;
+      }
+      addWorkerJob(cn, "user");
+    });
+    return () => setRemoteBlockApplier(null);
+  }, [FillerLoadDoneValue]);
 
   function updateDisplayedChunks(currentChunk) {
     let chunksToDisplay = getNearbyChunkIds(

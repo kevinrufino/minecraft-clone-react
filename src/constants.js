@@ -4,7 +4,8 @@ import { chunkIdFromPosition } from "./world/chunkMath";
 // - movewithJOY_BOOL comes from the title screen choice
 // - startingChunk is recalculated when the start position is randomized
 const settings = {
-  onlineEnabled: false,
+  // tries localhost:5000 (or the remote server); falls back to offline if unreachable
+  onlineEnabled: true,
   // when online, connect to the deployed ReactMineCraftCloneServer instead of localhost
   useRemoteServer: false,
 

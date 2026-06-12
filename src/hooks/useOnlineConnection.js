@@ -1,76 +1,90 @@
 import { useEffect } from "react";
 import settings from "../constants";
 import { useStore } from "./useStore";
+import { applyRemoteBlockEvent } from "../world/remoteBlocks";
 import io from "socket.io-client";
 
 // Server code lives at https://github.com/GreyDaCaLa/ReactMineCraftCloneServer
+// (5050 because macOS AirPlay squats on port 5000)
 const ENDPOINT = settings.useRemoteServer
   ? "https://ghk-reactminecraftcloneserver.onrender.com"
-  : "http://localhost:5000";
+  : "http://localhost:5050";
+
+// if the server can't be reached in this window, start the game offline
+const OFFLINE_FALLBACK_MS = 6000;
+
+// Module-level singleton: React StrictMode double-mounts effects, and two
+// sockets means the server sees a ghost player. One socket per page, period.
+let sharedSocket = null;
+
+function connectSocket() {
+  if (sharedSocket) {
+    return sharedSocket;
+  }
+
+  const store = useStore.getState();
+  sharedSocket = io.connect(ENDPOINT, {
+    forceNew: true,
+    reconnectionAttempts: 5,
+    timeout: 10000,
+    transports: ["websocket"],
+  });
+
+  sharedSocket.on("S_GiveWorld", (world) => {
+    // replay every block other players placed before we joined
+    (world.cubes || []).forEach((cube) => {
+      applyRemoteBlockEvent({
+        type: "add",
+        pos: cube.pos,
+        texture: cube.texture,
+      });
+    });
+    store.online_setPlayersPos(world.players);
+    store.online_SetEstablishedConn(true);
+  });
+  sharedSocket.on("S_GiveplayerNum", (pnum) => {
+    store.online_setplayerNum(pnum);
+  });
+  sharedSocket.on("S_HeartBeat", (world) => {
+    useStore.getState().online_setPlayersPos(world.players);
+  });
+  sharedSocket.on("S_BlockAdded", ({ pos, texture }) => {
+    applyRemoteBlockEvent({ type: "add", pos, texture });
+  });
+  sharedSocket.on("S_BlockRemoved", ({ pos }) => {
+    applyRemoteBlockEvent({ type: "remove", pos });
+  });
+  sharedSocket.on("S_BlocksReset", () => {
+    window.location.reload();
+  });
+
+  // no server? fall back to single player instead of waiting forever
+  setTimeout(() => {
+    if (!useStore.getState().establishedConn) {
+      console.warn(`No multiplayer server at ${ENDPOINT}, starting offline.`);
+      settings.onlineEnabled = false;
+      sharedSocket.close();
+      useStore.getState().online_SetEstablishedConn(true);
+    }
+  }, OFFLINE_FALLBACK_MS);
+
+  store.online_Addsocket(sharedSocket);
+  return sharedSocket;
+}
 
 // Opens the socket.io connection and keeps player/world state in the store.
 // When online play is disabled this just marks the connection as established
 // so the game can proceed.
 export function useOnlineConnection() {
-  const [
-    establishedConn,
-    online_SetEstablishedConn,
-    online_Addsocket,
-    socket,
-    online_setplayerNum,
-    online_setPlayersPos,
-    playernum,
-  ] = useStore((state) => [
-    state.establishedConn,
-    state.online_SetEstablishedConn,
-    state.online_Addsocket,
-    state.socket,
-    state.online_setplayerNum,
-    state.online_setPlayersPos,
-    state.playernum,
-  ]);
+  const establishedConn = useStore((state) => state.establishedConn);
 
   useEffect(() => {
-    if (settings.onlineEnabled && socket) {
-      //@TODO: world.cubes from the server is not merged into the chunk world yet
-      socket.on("S_GiveWorld", (world) => {
-        online_setPlayersPos(world.players);
-        online_SetEstablishedConn(true);
-      });
-      socket.on("S_GiveplayerNum", (pnum) => {
-        online_setplayerNum(pnum);
-      });
-      socket.on("S_HeartBeat", (world) => {
-        online_setPlayersPos(world.players);
-      });
+    if (settings.onlineEnabled) {
+      connectSocket();
+    } else if (!useStore.getState().establishedConn) {
+      useStore.getState().online_SetEstablishedConn(true);
     }
-
-    if (!settings.onlineEnabled && !establishedConn) {
-      online_SetEstablishedConn(true);
-    }
-  }, [socket]);
-
-  //making connection
-  useEffect(() => {
-    if (!settings.onlineEnabled) {
-      return;
-    }
-
-    const connectionOptions = {
-      forceNew: true,
-      reconnectionAttempts: "5",
-      timeout: 10000,
-      transports: ["websocket"],
-    };
-    const newSocket = io.connect(ENDPOINT, connectionOptions);
-    online_Addsocket(newSocket);
-
-    return () => {
-      if (playernum && newSocket.connected) {
-        newSocket.emit("C_RemovePlayer", { worldname: null, playernum });
-      }
-      newSocket.close();
-    };
+    // the server removes our player on disconnect, so no unmount cleanup needed
   }, []);
 
   return establishedConn;

@@ -19,22 +19,22 @@ export const useStore = create((set, get) => ({
     }));
   },
 
-  online_addCube: (x, y, z) => {
+  online_addCube: (pos, texture) => {
     let params = {
       worldname: null,
-      pos: [x, y, z],
+      pos,
       key: nanoid(),
-      texture: get().texture,
+      texture: texture || get().texture,
     };
     let socket = get().socket;
     if (socket && socket.connected) {
       socket.emit("C_addBlock", params);
     }
   },
-  online_removeCube: (x, y, z) => {
+  online_removeCube: (pos) => {
     let params = {
       worldname: null,
-      pos: [x, y, z],
+      pos,
     };
     let socket = get().socket;
     if (socket && socket.connected) {
