@@ -24,6 +24,17 @@ function isTransparent(texture) {
   return TRANSPARENT_TEXTURES.includes(texture);
 }
 
+// Surface height (fraction of a full block, 0..1) for a water cell, by how far
+// it has flowed. Generated source water has no `flow` field and sits near full;
+// flowing water (flow 1..4, set in Cubes.jsx's water sim, 4 = strongest) lowers
+// its surface the further it has spread -- so streams visibly slope downhill.
+function waterTopFrac(flow) {
+  if (flow == null) {
+    return 0.9; // source / falling water -- effectively a full block
+  }
+  return 0.3 + 0.55 * ((flow - 1) / 3);
+}
+
 // A face is hidden when its neighbor fully covers it:
 // - opaque blocks cull against opaque neighbors
 // - transparent blocks cull against the same texture (water-water,
@@ -72,6 +83,19 @@ export function genFaceArrays(t, blocks, chunkBlocks) {
     c[6] = [x - t, y - t, z - t];
     c[7] = [x - t, y + t, z - t];
     c[8] = [x + t, y + t, z - t];
+
+    // a water cell with air above is a surface cell -- drop its top (and the
+    // top edges of its side faces) so flowing water reads as a sloping stream
+    if (texture === "water") {
+      const above = blocks[makeKey(nx, ny + t2, nz)];
+      if (!above || above.texture !== "water") {
+        const topY = y - t + t2 * waterTopFrac(block.flow);
+        c[3][1] = topY;
+        c[4][1] = topY;
+        c[7][1] = topY;
+        c[8][1] = topY;
+      }
+    }
 
     function pushFace(corners, normal, face, shade) {
       target.vertices.push(...corners[0], ...corners[1], ...corners[2]);
