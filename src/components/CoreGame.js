@@ -13,8 +13,9 @@ import { Clouds } from "./effects/Clouds";
 import { BlockOutline } from "./effects/BlockOutline";
 import { HeldBlock } from "./effects/HeldBlock";
 import LowerControlStrip from "../hooks/LowerControlStrip";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useControls } from "leva";
+import { toggleSound, startAmbient } from "../world/sound";
 
 const MIN_RADIUS = 3;
 const MAX_RADIUS = 8;
@@ -91,6 +92,26 @@ const CoreGame = () => {
   function updateInitStatus(obj) {
     setInitStatus((prev) => ({ ...prev, ...obj }));
   }
+
+  // M toggles sound; start the ambient pad on the first user gesture (audio
+  // can't begin until the browser has seen one)
+  useEffect(() => {
+    function onKey(e) {
+      if (e.code === "KeyM") {
+        toggleSound();
+      }
+    }
+    function startOnce() {
+      startAmbient();
+      window.removeEventListener("pointerdown", startOnce);
+    }
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", startOnce);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", startOnce);
+    };
+  }, []);
 
   const fogFar = viewRadius * settings.worldSettings.chunkSize;
   return (

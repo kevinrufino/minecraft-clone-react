@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import settings from "../../constants";
 import { makeKey } from "../../world/keys";
 import { useStore } from "../../hooks/useStore";
+import { playPlace, playBreak } from "../../world/sound";
 
 export const Chunk = ({
   chunkKey,
@@ -66,6 +67,7 @@ export const Chunk = ({
           return;
         }
         applyBlockChange({ type: "add", pos: blockToAdd, texture });
+        playPlace();
         if (settings.onlineEnabled) {
           online_addCube(blockToAdd, texture);
         }
@@ -78,6 +80,7 @@ export const Chunk = ({
           return;
         }
         applyBlockChange({ type: "remove", pos: contactBlock });
+        playBreak();
         if (settings.onlineEnabled) {
           online_removeCube(contactBlock);
         }
