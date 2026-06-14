@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import settings from "../../constants";
+import { saveNow } from "../../world/edits";
 
 const CONTROLS = [
   ["WASD", "Move"],
@@ -20,6 +21,7 @@ function requestLock() {
 const PauseOverlay = () => {
   const [locked, setLocked] = useState(false);
   const [hasBeenLocked, setHasBeenLocked] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
 
   useEffect(() => {
     function onLockChange() {
@@ -47,6 +49,13 @@ const PauseOverlay = () => {
       document.exitPointerLock();
     }
     window.location.reload();
+  }
+
+  function saveWorld(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    const n = saveNow();
+    setSaveMsg(n >= 0 ? `World saved (${n} changes)` : "Nothing to save yet");
   }
 
   return (
@@ -80,23 +89,36 @@ const PauseOverlay = () => {
         )}
 
         {isPaused && (
-          <div className="pause-overlay__btn-row">
-            <button
-              className="mc-play-btn"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                requestLock();
-              }}
-            >
-              Back to Game
-            </button>
-            <button
-              className="mc-play-btn mc-play-btn--danger"
-              onPointerDown={quitToTitle}
-            >
-              Quit to Title
-            </button>
-          </div>
+          <>
+            <div className="pause-overlay__btn-row">
+              <button
+                className="mc-play-btn"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  requestLock();
+                }}
+              >
+                Back to Game
+              </button>
+              {!settings.onlineEnabled && (
+                <button className="mc-play-btn" onPointerDown={saveWorld}>
+                  Save World
+                </button>
+              )}
+              <button
+                className="mc-play-btn mc-play-btn--danger"
+                onPointerDown={quitToTitle}
+              >
+                Quit to Title
+              </button>
+            </div>
+            <p className="pause-overlay__note">
+              {settings.onlineEnabled
+                ? "Multiplayer: anyone who opens this game (another tab or device) joins the same world automatically. Hold Tab to see who's online."
+                : saveMsg ||
+                  "Your world auto-saves to this browser as you build. Use Save World to save right now."}
+            </p>
+          </>
         )}
 
         {!isPaused && (

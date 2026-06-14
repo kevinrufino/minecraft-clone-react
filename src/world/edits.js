@@ -49,6 +49,21 @@ export function clearEdits() {
   }
 }
 
+// Force an immediate save (used by the "Save World" pause-menu button).
+// Returns the number of edits saved, or -1 if there's nowhere to save to.
+export function saveNow() {
+  if (!storageKey) {
+    return -1;
+  }
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(edits));
+    return Object.keys(edits).length;
+  } catch (err) {
+    console.warn("Could not save world edits:", err);
+    return -1;
+  }
+}
+
 function scheduleSave() {
   if (!storageKey || saveTimer) {
     return;

@@ -8,13 +8,13 @@ import settings from "../constants";
 import { OrbitControls } from "@react-three/drei";
 import { LoadingWorldScreen } from "./UIComponents/LoadingWorldScreen";
 import PauseOverlay from "./UIComponents/PauseOverlay";
+import { PlayerList } from "./UIComponents/PlayerList";
 import { DayNight } from "./effects/DayNight";
 import { Clouds } from "./effects/Clouds";
 import { BlockOutline } from "./effects/BlockOutline";
 import { HeldBlock } from "./effects/HeldBlock";
 import LowerControlStrip from "../hooks/LowerControlStrip";
 import { useRef, useState, useEffect } from "react";
-import { useControls } from "leva";
 import { toggleSound, startAmbient } from "../world/sound";
 
 const MIN_RADIUS = 3;
@@ -80,14 +80,12 @@ const CoreGame = () => {
     });
   }
 
-  // live debug panel -- tweak render toggles here while playing
-  const { showUIContent, showFPS, showSky, orbitalControlsEnabled } =
-    useControls({
-      showUIContent: { value: false, label: "show UI content" },
-      showFPS: { value: true, label: "show FPS" },
-      showSky: { value: true, label: "show sky" },
-      orbitalControlsEnabled: { value: false, label: "orbital controls" },
-    });
+  // render toggles (previously a leva debug panel; removed for a cleaner,
+  // beginner-friendly player UI)
+  const showUIContent = false;
+  const showFPS = false;
+  const showSky = true;
+  const orbitalControlsEnabled = false;
 
   function updateInitStatus(obj) {
     setInitStatus((prev) => ({ ...prev, ...obj }));
@@ -117,10 +115,7 @@ const CoreGame = () => {
   return (
     <>
       {settings.showLoadingWorldBanner ? (
-        <LoadingWorldScreen
-          buildWorkers={initStatus.buildWorkers}
-          chunksMadeCounter={chunksMadeCounter}
-        />
+        <LoadingWorldScreen buildWorkers={initStatus.buildWorkers} chunksMadeCounter={chunksMadeCounter} />
       ) : (
         <></>
       )}
@@ -128,10 +123,7 @@ const CoreGame = () => {
         {/* fog hides the chunk-loading edge; scales with the live view radius */}
         <fog attach="fog" args={["#d7e7f5", fogFar * 0.35, fogFar * 0.85]} />
         {showFPS && <Stats />}
-        <PerformanceMonitor
-          onIncline={() => adjustViewRadius(1)}
-          onDecline={() => adjustViewRadius(-1)}
-        />
+        <PerformanceMonitor onIncline={() => adjustViewRadius(1)} onDecline={() => adjustViewRadius(-1)} />
         <DayNight showSky={showSky} />
         <Clouds />
         <Scene
@@ -154,10 +146,9 @@ const CoreGame = () => {
           <Help />
         </>
       )}
-      {!settings.ignoreCameraFollowPlayer && (
-        <div className="cursor centered absolute">+</div>
-      )}
+      {!settings.ignoreCameraFollowPlayer && <div className="cursor centered absolute">+</div>}
       <TextureSelector activeTextureREF={activeTextureREF} />
+      <PlayerList />
       <PauseOverlay />
     </>
   );
