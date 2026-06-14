@@ -8,13 +8,13 @@ import settings from "../constants";
 import { OrbitControls } from "@react-three/drei";
 import { LoadingWorldScreen } from "./UIComponents/LoadingWorldScreen";
 import PauseOverlay from "./UIComponents/PauseOverlay";
+import { PlayerList } from "./UIComponents/PlayerList";
 import { DayNight } from "./effects/DayNight";
 import { Clouds } from "./effects/Clouds";
 import { BlockOutline } from "./effects/BlockOutline";
 import { HeldBlock } from "./effects/HeldBlock";
 import LowerControlStrip from "../hooks/LowerControlStrip";
 import { useRef, useState } from "react";
-import { useControls } from "leva";
 
 const MIN_RADIUS = 3;
 const MAX_RADIUS = 8;
@@ -79,14 +79,12 @@ const CoreGame = () => {
     });
   }
 
-  // live debug panel -- tweak render toggles here while playing
-  const { showUIContent, showFPS, showSky, orbitalControlsEnabled } =
-    useControls({
-      showUIContent: { value: false, label: "show UI content" },
-      showFPS: { value: true, label: "show FPS" },
-      showSky: { value: true, label: "show sky" },
-      orbitalControlsEnabled: { value: false, label: "orbital controls" },
-    });
+  // render toggles (previously a leva debug panel; removed for a cleaner,
+  // beginner-friendly player UI)
+  const showUIContent = false;
+  const showFPS = false;
+  const showSky = true;
+  const orbitalControlsEnabled = false;
 
   function updateInitStatus(obj) {
     setInitStatus((prev) => ({ ...prev, ...obj }));
@@ -137,6 +135,7 @@ const CoreGame = () => {
         <div className="cursor centered absolute">+</div>
       )}
       <TextureSelector activeTextureREF={activeTextureREF} />
+      <PlayerList />
       <PauseOverlay />
     </>
   );
