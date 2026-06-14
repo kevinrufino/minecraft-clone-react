@@ -5,6 +5,7 @@ import settings from "../../constants";
 import { useKeyboard } from "../../hooks/useKeyboard";
 import { useStore } from "../../hooks/useStore";
 import { makeKey } from "../../world/keys";
+import { playFootstep } from "../../world/sound";
 import { FPV } from "./controls/FPV";
 
 const GRAVITY = -25; // units/s^2 -- gentle, for a floaty Minecraft-y arc
@@ -72,6 +73,7 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
   }
 
   const wasSprintingOnGround = useRef(false);
+  const stepDist = useRef(0); // distance walked since the last footstep sound
 
   function doMovement(dt) {
     checkFlyToggle();
@@ -442,6 +444,23 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     pos.current[0] += vel.current[0] * dt;
     pos.current[1] += vel.current[1] * dt;
     pos.current[2] += vel.current[2] * dt;
+
+    // footsteps: one sound per stride while walking on solid ground
+    const horizSpeed = Math.hypot(vel.current[0], vel.current[2]);
+    if (
+      movementStatus.current.onGround &&
+      !movementStatus.current.flying &&
+      horizSpeed > 0.5
+    ) {
+      stepDist.current += horizSpeed * dt;
+      const stride = movementStatus.current.inWater ? 3.0 : 2.2;
+      if (stepDist.current >= stride) {
+        stepDist.current = 0;
+        playFootstep();
+      }
+    } else {
+      stepDist.current = 0;
+    }
 
     // fell out of the world (e.g. into an ungenerated chunk) -- respawn
     if (pos.current[1] < settings.worldSettings.minY - 20) {
