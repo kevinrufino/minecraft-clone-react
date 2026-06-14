@@ -22,6 +22,11 @@ export const Chunk = ({
   ]);
 
   function clickCubeFace(e) {
+    // desktop play is driven by MiningController (hold-to-break + place);
+    // this tap handler is only for touch/joystick devices
+    if (!settings.movewithJOY_BOOL) {
+      return;
+    }
     e.stopPropagation();
     var raycaster = new THREE.Raycaster();
     var mouse = new THREE.Vector2();

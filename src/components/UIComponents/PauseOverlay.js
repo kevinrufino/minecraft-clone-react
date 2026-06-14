@@ -5,8 +5,8 @@ const CONTROLS = [
   ["WASD", "Move"],
   ["Space", "Jump"],
   ["Double-tap W", "Sprint"],
-  ["Left click", "Place block"],
-  ["Right click", "Break block"],
+  ["Hold left click", "Break block"],
+  ["Right click", "Place block"],
   ["1-5 / Wheel", "Select block"],
   ["Esc", "Pause"],
 ];

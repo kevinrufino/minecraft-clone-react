@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Chunk } from "./Chunk";
+import { MiningController } from "./MiningController";
 import { useFrame, useThree } from "@react-three/fiber";
 import settings from "../../constants";
 import {
@@ -441,18 +442,29 @@ export const Cubes = ({
     activeChunks.current = chunksToDisplay;
   }
 
-  return !FillerLoadDoneValue
-    ? null
-    : chunkKeyList.map((ck) => {
-        return (
-          <Chunk
-            key={`cubechunk${ck}`}
-            chunkKey={ck}
-            chunkProps={chunks}
-            activeTextureREF={activeTextureREF}
-            REF_ALLCUBES={REF_ALLCUBES}
-            applyBlockChange={applyBlockChange}
-          />
-        );
-      });
+  if (!FillerLoadDoneValue) {
+    return null;
+  }
+  return (
+    <>
+      {chunkKeyList.map((ck) => (
+        <Chunk
+          key={`cubechunk${ck}`}
+          chunkKey={ck}
+          chunkProps={chunks}
+          activeTextureREF={activeTextureREF}
+          REF_ALLCUBES={REF_ALLCUBES}
+          applyBlockChange={applyBlockChange}
+        />
+      ))}
+      {/* desktop crosshair mining/placing; mobile uses Chunk's tap handler */}
+      {!settings.movewithJOY_BOOL && (
+        <MiningController
+          applyBlockChange={applyBlockChange}
+          REF_ALLCUBES={REF_ALLCUBES}
+          activeTextureREF={activeTextureREF}
+        />
+      )}
+    </>
+  );
 };
