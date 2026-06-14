@@ -1,4 +1,4 @@
-import { createNoise2D } from "simplex-noise";
+import { createNoise2D, createNoise3D } from "simplex-noise";
 import alea from "alea";
 import { makeKey } from "../world/keys";
 import { parseChunkKey } from "../world/chunkMath";
@@ -24,11 +24,30 @@ onmessage = (e) => {
 function initializeWorker(init) {
   worldSet = { ...init.worldSettings };
   worldSet.genNoise2D = createNoise2D(alea(worldSet.seed));
+  // two independent 3D fields drive the cave carve (see isCave)
+  worldSet.caveNoiseA = createNoise3D(alea(worldSet.seed + "-caveA"));
+  worldSet.caveNoiseB = createNoise3D(alea(worldSet.seed + "-caveB"));
   worldSet.seedNum = String(worldSet.seed)
     .split("")
     .reduce((a, c) => a + c.charCodeAt(0) * 31, 7);
 
   postMessage({ init: true });
+}
+
+// "Spaghetti" caves: where two independent 3D noise fields are both near
+// zero, their iso-surfaces intersect along winding tube-like channels --
+// the same trick modern Minecraft uses for noise caves. It's purely a
+// function of (x,y,z), so it stays consistent across chunk borders and
+// workers without any worm-tracing or cross-chunk bookkeeping.
+const CAVE_SCALE = 1 / 24; // larger -> wider, sparser caverns
+const CAVE_THRESHOLD = 0.1; // larger -> more/bigger caves
+function isCave(x, y, z) {
+  const a = worldSet.caveNoiseA(x * CAVE_SCALE, y * CAVE_SCALE, z * CAVE_SCALE);
+  if (Math.abs(a) > CAVE_THRESHOLD) {
+    return false;
+  }
+  const b = worldSet.caveNoiseB(x * CAVE_SCALE, y * CAVE_SCALE, z * CAVE_SCALE);
+  return Math.abs(b) <= CAVE_THRESHOLD;
 }
 
 // Deterministic per-position hash in [0,1) -- trees must land on the same
@@ -69,6 +88,12 @@ function columnBlocks(x, z, info, infoList) {
   const beach = h <= waterLevel + 1;
 
   for (let y = minY; y <= h; y++) {
+    // carve caves out of the stone interior: skip the surface skin (top 4
+    // blocks) so terrain stays capped, and keep bedrock + one block above it
+    // as a solid floor so caves never bottom out into the void
+    if (y > minY + 1 && y <= h - 4 && isCave(x, y, z)) {
+      continue;
+    }
     let texture;
     if (y === minY) {
       texture = "bedrock";
