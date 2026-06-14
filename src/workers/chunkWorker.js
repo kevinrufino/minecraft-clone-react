@@ -24,11 +24,41 @@ onmessage = (e) => {
 function initializeWorker(init) {
   worldSet = { ...init.worldSettings };
   worldSet.genNoise2D = createNoise2D(alea(worldSet.seed));
+  // independent low-frequency maps pick biomes without disturbing the height
+  // field, plus an extra octave for richer relief
+  worldSet.contNoise = createNoise2D(alea(worldSet.seed + "-cont")); // land/ocean
+  worldSet.tempNoise = createNoise2D(alea(worldSet.seed + "-temp")); // desert/plains
+  worldSet.detailNoise = createNoise2D(alea(worldSet.seed + "-detail"));
   worldSet.seedNum = String(worldSet.seed)
     .split("")
     .reduce((a, c) => a + c.charCodeAt(0) * 31, 7);
 
   postMessage({ init: true });
+}
+
+const OCEAN = "ocean";
+const DESERT = "desert";
+const PLAINS = "plains";
+
+function smoothstep(a, b, x) {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+// Smoothly-varying biome map on large scales. Continentalness picks ocean vs
+// land; on land, temperature picks desert vs plains. Used only for surface
+// material + tree placement -- terrain *height* is driven continuously by
+// continentalness (see surfaceHeight) so biome edges never form cliffs.
+function biomeAt(x, z) {
+  const cont = (worldSet.contNoise(x / 380, z / 380) + 1) / 2;
+  if (cont < 0.4) {
+    return OCEAN;
+  }
+  const temp = (worldSet.tempNoise(x / 260, z / 260) + 1) / 2;
+  if (temp > 0.62) {
+    return DESERT;
+  }
+  return PLAINS;
 }
 
 // Deterministic per-position hash in [0,1) -- trees must land on the same
@@ -54,28 +84,47 @@ function regularFlow(data) {
   });
 }
 
-// Terrain column height from two octaves of seeded noise. Shifted down so
-// low areas dip below sea level and fill with water.
+// Terrain column height. Land elevation mixes three octaves for more depth
+// and variation than the original two; continentalness then lerps the whole
+// column down toward an ocean floor as we move out to sea, giving smooth
+// coastlines and proper deep-water ocean biomes.
+const OCEAN_FLOOR = -6; // sits at minY+1 (bedrock floor is minY = -7)
 function surfaceHeight(x, z) {
-  const noise2D = worldSet.genNoise2D;
-  const broad = (noise2D(x / 100, z / 100) + 1) / 2; // rolling hills
-  const detail = (noise2D(x / 25, z / 25) + 1) / 2; // small bumps
-  return Math.floor(broad * worldSet.heightFactor + detail * 3) - 3;
+  const n = worldSet.genNoise2D;
+  const d = worldSet.detailNoise;
+  const hf = worldSet.heightFactor;
+
+  const broad = (n(x / 140, z / 140) + 1) / 2; // big landforms
+  const hills = (n(x / 55, z / 55) + 1) / 2; // hills
+  const detail = (d(x / 22, z / 22) + 1) / 2; // bumps
+  const landElev = broad * hf * 1.3 + hills * 5 + detail * 2.5 - 2;
+
+  // 0 = deep ocean, 1 = full inland; the band between is the coast
+  const cont = (worldSet.contNoise(x / 380, z / 380) + 1) / 2;
+  const cf = smoothstep(0.3, 0.55, cont);
+  const elev = OCEAN_FLOOR + (landElev - OCEAN_FLOOR) * cf;
+
+  return Math.floor(elev);
 }
 
 function columnBlocks(x, z, info, infoList) {
-  const h = surfaceHeight(x, z);
   const { minY, waterLevel } = worldSet;
-  const beach = h <= waterLevel + 1;
+  let h = surfaceHeight(x, z);
+  if (h < minY + 1) {
+    h = minY + 1; // never leave a void column under deep ocean
+  }
+  const biome = biomeAt(x, z);
+  // sand surface in deserts, on ocean/lake floors, and on beaches near water
+  const sandy = biome === DESERT || biome === OCEAN || h <= waterLevel + 1;
 
   for (let y = minY; y <= h; y++) {
     let texture;
     if (y === minY) {
       texture = "bedrock";
     } else if (y === h) {
-      texture = beach ? "sand" : "grass";
+      texture = sandy ? "sand" : "grass";
     } else if (y >= h - 3) {
-      texture = beach ? "sand" : "dirt";
+      texture = sandy ? "sand" : "dirt";
     } else {
       texture = "stone";
     }
@@ -99,6 +148,9 @@ const TREE_MARGIN = 3; // max canopy radius -- trees this close outside a chunk 
 function treeAt(x, z) {
   if (hash01(x, z, worldSet.seedNum) >= TREE_CHANCE) {
     return null;
+  }
+  if (biomeAt(x, z) !== PLAINS) {
+    return null; // trees only grow in the plains biome (not desert/ocean)
   }
   const h = surfaceHeight(x, z);
   if (h <= worldSet.waterLevel + 1) {
