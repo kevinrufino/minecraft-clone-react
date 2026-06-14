@@ -1,49 +1,43 @@
 import { useEffect } from "react";
 import { useStore } from "../hooks/useStore";
-import { dirtImg, grassImg, glassImg, logImg, woodImg } from "../images/images";
+import { AtlasTile } from "./UIComponents/AtlasTile";
 
-const images = {
-  dirt: dirtImg,
-  grass: grassImg,
-  glass: glassImg,
-  wood: woodImg,
-  log: logImg,
-};
-
-const texturesArray = Object.keys(images);
-
-// 9 hotbar slots: first 5 have textures, last 4 are empty
-const HOTBAR_SLOTS = 9;
-
+// The hotbar. Slots and the selected index live in the store so the creative
+// inventory (E) can reassign them. The selected slot's block is mirrored into
+// store.texture + activeTextureREF, which the placement code reads.
 export const TextureSelector = ({ activeTextureREF }) => {
-  const [activeTexture, setTexture] = useStore((state) => [
-    state.texture,
-    state.setTexture,
-  ]);
+  const hotbar = useStore((s) => s.hotbar);
+  const selectedSlot = useStore((s) => s.selectedSlot);
+  const setTexture = useStore((s) => s.setTexture);
+
+  // keep the active placement texture in sync with the selected slot
+  useEffect(() => {
+    const tex = hotbar[selectedSlot] || "dirt";
+    setTexture(tex);
+    activeTextureREF.current = tex;
+  }, [hotbar, selectedSlot, setTexture, activeTextureREF]);
 
   useEffect(() => {
-    function pickTexture(texture) {
-      setTexture(texture);
-      activeTextureREF.current = texture;
-    }
-
     function handleWheel(event) {
-      const delta = Math.sign(event.deltaY);
-      const nextPos = texturesArray.indexOf(activeTexture) + delta;
-      if (nextPos >= 0 && nextPos < texturesArray.length) {
-        pickTexture(texturesArray[nextPos]);
+      const st = useStore.getState();
+      if (st.inventoryOpen) {
+        return; // wheel scrolls the inventory, not the hotbar
       }
+      const n = st.hotbar.length;
+      const delta = Math.sign(event.deltaY);
+      st.setSelectedSlot((st.selectedSlot + delta + n) % n);
     }
 
-    // 1-9 select hotbar slots directly (only filled slots respond)
+    // 1-9 select hotbar slots directly
     function handleKeyDown(event) {
       const m = /^Digit([1-9])$/.exec(event.code);
       if (!m) {
         return;
       }
+      const st = useStore.getState();
       const slot = Number(m[1]) - 1;
-      if (texturesArray[slot]) {
-        pickTexture(texturesArray[slot]);
+      if (slot < st.hotbar.length) {
+        st.setSelectedSlot(slot);
       }
     }
 
@@ -53,25 +47,18 @@ export const TextureSelector = ({ activeTextureREF }) => {
       window.removeEventListener("wheel", handleWheel);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [setTexture, activeTexture, activeTextureREF]);
-
-  const slots = Array.from({ length: HOTBAR_SLOTS }, (_, i) => {
-    const key = texturesArray[i] || null;
-    return { key, src: key ? images[key] : null };
-  });
+  }, []);
 
   return (
     <div className="hotbar">
-      {slots.map((slot, i) => {
-        const isActive = slot.key === activeTexture;
+      {hotbar.map((key, i) => {
+        const isActive = i === selectedSlot;
         return (
           <div
             key={i}
             className={`hotbar__slot${isActive ? " hotbar__slot--active" : ""}`}
           >
-            {slot.src && (
-              <img src={slot.src} alt={slot.key} className="hotbar__img" />
-            )}
+            {key && <AtlasTile texture={key} size={38} />}
           </div>
         );
       })}
