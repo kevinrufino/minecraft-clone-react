@@ -1,21 +1,8 @@
 import { useRef, useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import {
-  dirtTexture,
-  grassTexture,
-  glassTexture,
-  woodTexture,
-  logTexture,
-} from "../../images/textures";
+import { allMincraftTexture } from "../../images/textures";
+import { tileFor, ATLAS_GRID_SIZE } from "../../world/atlas";
 import { useStore } from "../../hooks/useStore";
-
-const TEXTURE_MAP = {
-  dirt: dirtTexture,
-  grass: grassTexture,
-  glass: glassTexture,
-  wood: woodTexture,
-  log: logTexture,
-};
 
 export function HeldBlock() {
   const { camera } = useThree();
@@ -27,7 +14,16 @@ export function HeldBlock() {
   const bobTime = useRef(0);
   const swingRef = useRef(0);
 
-  const tex = useMemo(() => TEXTURE_MAP[texture] || dirtTexture, [texture]);
+  // show the held block by clipping the shared atlas down to its side tile;
+  // works for every block in the atlas, not just the few with standalone PNGs
+  const tex = useMemo(() => {
+    const [col, row] = tileFor(texture, "side");
+    const t = allMincraftTexture.clone();
+    t.needsUpdate = true;
+    t.repeat.set(1 / ATLAS_GRID_SIZE, 1 / ATLAS_GRID_SIZE);
+    t.offset.set((col - 1) / ATLAS_GRID_SIZE, (row - 1) / ATLAS_GRID_SIZE);
+    return t;
+  }, [texture]);
 
   useEffect(() => {
     const onPointerDown = () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import settings from "../../constants";
+import { useStore } from "../../hooks/useStore";
 
 const CONTROLS = [
   ["WASD", "Move"],
@@ -7,7 +8,8 @@ const CONTROLS = [
   ["Double-tap W", "Sprint"],
   ["Left click", "Place block"],
   ["Right click", "Break block"],
-  ["1-5 / Wheel", "Select block"],
+  ["1-9 / Wheel", "Select block"],
+  ["E", "Inventory"],
   ["Esc", "Pause"],
 ];
 
@@ -19,6 +21,7 @@ function requestLock() {
 const PauseOverlay = () => {
   const [locked, setLocked] = useState(false);
   const [hasBeenLocked, setHasBeenLocked] = useState(false);
+  const inventoryOpen = useStore((s) => s.inventoryOpen);
 
   useEffect(() => {
     function onLockChange() {
@@ -33,6 +36,10 @@ const PauseOverlay = () => {
 
   // Don't render anything on touch/joystick devices
   if (settings.movewithJOY_BOOL) return null;
+
+  // The creative inventory releases pointer lock on purpose — don't treat that
+  // as a pause
+  if (inventoryOpen) return null;
 
   // Pointer is locked — game is running, no overlay needed
   if (locked) return null;
