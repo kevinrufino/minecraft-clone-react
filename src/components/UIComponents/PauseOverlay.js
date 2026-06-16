@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import settings from "../../constants";
 import { persistEditsTo } from "../../world/edits";
 import { listSaves, getSave, upsertSave, createSaveId } from "../../world/saves";
+import { useStore, RENDER_MIN, RENDER_MAX } from "../../hooks/useStore";
 
 const CONTROLS = [
   ["WASD", "Move"],
@@ -32,6 +33,43 @@ function ControlsLegend() {
 function requestLock() {
   const canvas = document.querySelector("canvas");
   if (canvas) canvas.requestPointerLock();
+}
+
+// FPS overlay toggle + render-distance slider. Both write straight to the
+// store; the slider takes render distance off auto-tune for the session.
+function GameSettings() {
+  const showFPS = useStore((s) => s.showFPS);
+  const toggleShowFPS = useStore((s) => s.toggleShowFPS);
+  const viewRadius = useStore((s) => s.viewRadius);
+  const setViewRadius = useStore((s) => s.setViewRadius);
+
+  return (
+    <div className="pause-settings">
+      <label className="pause-settings__row pause-settings__row--toggle">
+        <span className="pause-settings__label">Show FPS</span>
+        <input
+          type="checkbox"
+          className="pause-settings__checkbox"
+          checked={showFPS}
+          onChange={toggleShowFPS}
+        />
+      </label>
+      <div className="pause-settings__row">
+        <span className="pause-settings__label">
+          Render Distance: {viewRadius} {viewRadius === 1 ? "chunk" : "chunks"}
+        </span>
+        <input
+          type="range"
+          className="pause-settings__slider"
+          min={RENDER_MIN}
+          max={RENDER_MAX}
+          step={1}
+          value={viewRadius}
+          onChange={(e) => setViewRadius(Number(e.target.value))}
+        />
+      </div>
+    </div>
+  );
 }
 
 const PauseOverlay = () => {
@@ -189,6 +227,7 @@ const PauseOverlay = () => {
         {/* Paused action buttons (hidden while the save panel is open) */}
         {isPaused && !saving && (
           <>
+            <GameSettings />
             <div className="pause-overlay__btn-row">
               <button
                 className="mc-play-btn"

@@ -16,23 +16,7 @@ import { HeldBlock } from "./effects/HeldBlock";
 import LowerControlStrip from "../hooks/LowerControlStrip";
 import { useRef, useState, useEffect } from "react";
 import { toggleSound, startAmbient } from "../world/sound";
-
-const MIN_RADIUS = 3;
-const MAX_RADIUS = 8;
-
-// First guess at render distance from device telemetry; PerformanceMonitor
-// then walks it up or down based on measured frame rate.
-function initialViewRadius() {
-  const cores = navigator.hardwareConcurrency || 4;
-  const mem = navigator.deviceMemory || 4; // GB; undefined on Safari/Firefox
-  if (cores >= 8 && mem >= 8) {
-    return 6;
-  }
-  if (cores >= 4) {
-    return 5;
-  }
-  return 4;
-}
+import { useStore } from "../hooks/useStore";
 
 const CoreGame = () => {
   let moveBools = useRef({
@@ -64,26 +48,15 @@ const CoreGame = () => {
     initWorkers: 0,
     initWorld: 0,
   });
-  const [viewRadius, setViewRadius] = useState(() => {
-    const r = initialViewRadius();
-    settings.viewRadius = r;
-    settings.outerViewRadius = r + 2;
-    return r;
-  });
-
-  function adjustViewRadius(delta) {
-    setViewRadius((prev) => {
-      const next = Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, prev + delta));
-      settings.viewRadius = next;
-      settings.outerViewRadius = next + 2;
-      return next;
-    });
-  }
+  // render distance + FPS overlay live in the store so the pause menu can
+  // drive them; PerformanceMonitor auto-tunes the radius until the player
+  // takes over via the slider
+  const viewRadius = useStore((s) => s.viewRadius);
+  const showFPS = useStore((s) => s.showFPS);
 
   // render toggles (previously a leva debug panel; removed for a cleaner,
   // beginner-friendly player UI)
   const showUIContent = false;
-  const showFPS = false;
   const showSky = true;
   const orbitalControlsEnabled = false;
 
@@ -123,7 +96,10 @@ const CoreGame = () => {
         {/* fog hides the chunk-loading edge; scales with the live view radius */}
         <fog attach="fog" args={["#d7e7f5", fogFar * 0.35, fogFar * 0.85]} />
         {showFPS && <Stats />}
-        <PerformanceMonitor onIncline={() => adjustViewRadius(1)} onDecline={() => adjustViewRadius(-1)} />
+        <PerformanceMonitor
+          onIncline={() => useStore.getState().autoAdjustViewRadius(1)}
+          onDecline={() => useStore.getState().autoAdjustViewRadius(-1)}
+        />
         <DayNight showSky={showSky} />
         <Clouds />
         <Scene

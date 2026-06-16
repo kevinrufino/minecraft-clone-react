@@ -29,6 +29,11 @@ function initializeWorker(init) {
   worldSet.caveNoiseA = createNoise3D(alea(worldSet.seed + "-caveA"));
   worldSet.caveNoiseB = createNoise3D(alea(worldSet.seed + "-caveB"));
   worldSet.caveNoiseC = createNoise3D(alea(worldSet.seed + "-caveC"));
+  // independent low-frequency maps pick biomes without disturbing the height
+  // field, plus an extra octave for richer relief
+  worldSet.contNoise = createNoise2D(alea(worldSet.seed + "-cont")); // land/ocean
+  worldSet.tempNoise = createNoise2D(alea(worldSet.seed + "-temp")); // desert/plains
+  worldSet.detailNoise = createNoise2D(alea(worldSet.seed + "-detail"));
   worldSet.seedNum = String(worldSet.seed)
     .split("")
     .reduce((a, c) => a + c.charCodeAt(0) * 31, 7);
@@ -84,12 +89,40 @@ function isCave(x, y, z) {
   return Math.abs(b) <= TUNNEL_THRESHOLD;
 }
 
-// Deterministic per-position hash in [0,1) -- trees must land on the same
-// columns no matter which chunk (or which worker) generates them.
+const OCEAN = "ocean";
+const DESERT = "desert";
+const PLAINS = "plains";
+
+function smoothstep(a, b, x) {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+// Smoothly-varying biome map on large scales. Continentalness picks ocean vs
+// land; on land, temperature picks desert vs plains. Used only for surface
+// material + tree placement -- terrain *height* is driven continuously by
+// continentalness (see surfaceHeight) so biome edges never form cliffs.
+function biomeAt(x, z) {
+  const cont = (worldSet.contNoise(x / 380, z / 380) + 1) / 2;
+  if (cont < 0.4) {
+    return OCEAN;
+  }
+  const temp = (worldSet.tempNoise(x / 260, z / 260) + 1) / 2;
+  if (temp > 0.62) {
+    return DESERT;
+  }
+  return PLAINS;
+}
+
+// Deterministic per-position hash in [0,1) -- trees and cacti must land on the
+// same columns no matter which chunk (or which worker) generates them. The
+// shifts must be unsigned (>>>): a signed >> sign-extends, which forces the
+// result's top bit to 0 and caps the output at 0.5 (so e.g. floor(hash01*3)
+// could never reach 2 and the rare "big tree" branch never fired).
 function hash01(x, z, salt) {
   let h = (x | 0) * 374761393 + (z | 0) * 668265263 + salt * 1274126177;
-  h = (h ^ (h >> 13)) * 1103515245;
-  h = h ^ (h >> 16);
+  h = (h ^ (h >>> 13)) * 1103515245;
+  h = h ^ (h >>> 16);
   return (h >>> 0) / 4294967296;
 }
 
@@ -107,19 +140,38 @@ function regularFlow(data) {
   });
 }
 
-// Terrain column height from two octaves of seeded noise. Shifted down so
-// low areas dip below sea level and fill with water.
+// Terrain column height. Land elevation mixes three octaves for more depth
+// and variation than the original two; continentalness then lerps the whole
+// column down toward an ocean floor as we move out to sea, giving smooth
+// coastlines and proper deep-water ocean biomes.
+const OCEAN_FLOOR = -6; // sits at minY+1 (bedrock floor is minY = -7)
 function surfaceHeight(x, z) {
-  const noise2D = worldSet.genNoise2D;
-  const broad = (noise2D(x / 100, z / 100) + 1) / 2; // rolling hills
-  const detail = (noise2D(x / 25, z / 25) + 1) / 2; // small bumps
-  return Math.floor(broad * worldSet.heightFactor + detail * 3) - 3;
+  const n = worldSet.genNoise2D;
+  const d = worldSet.detailNoise;
+  const hf = worldSet.heightFactor;
+
+  const broad = (n(x / 140, z / 140) + 1) / 2; // big landforms
+  const hills = (n(x / 55, z / 55) + 1) / 2; // hills
+  const detail = (d(x / 22, z / 22) + 1) / 2; // bumps
+  const landElev = broad * hf * 1.3 + hills * 5 + detail * 2.5 - 2;
+
+  // 0 = deep ocean, 1 = full inland; the band between is the coast
+  const cont = (worldSet.contNoise(x / 380, z / 380) + 1) / 2;
+  const cf = smoothstep(0.3, 0.55, cont);
+  const elev = OCEAN_FLOOR + (landElev - OCEAN_FLOOR) * cf;
+
+  return Math.floor(elev);
 }
 
 function columnBlocks(x, z, info, infoList) {
-  const h = surfaceHeight(x, z);
   const { minY, waterLevel } = worldSet;
-  const beach = h <= waterLevel + 1;
+  let h = surfaceHeight(x, z);
+  if (h < minY + 1) {
+    h = minY + 1; // never leave a void column under deep ocean
+  }
+  const biome = biomeAt(x, z);
+  // sand surface in deserts, on ocean/lake floors, and on beaches near water
+  const sandy = biome === DESERT || biome === OCEAN || h <= waterLevel + 1;
 
   for (let y = minY; y <= h; y++) {
     // carve caves out of the stone interior: skip the surface skin (top 4
@@ -132,9 +184,9 @@ function columnBlocks(x, z, info, infoList) {
     if (y === minY) {
       texture = "bedrock";
     } else if (y === h) {
-      texture = beach ? "sand" : "grass";
+      texture = sandy ? "sand" : "grass";
     } else if (y >= h - 3) {
-      texture = beach ? "sand" : "dirt";
+      texture = sandy ? "sand" : "dirt";
     } else {
       texture = "stone";
     }
@@ -158,6 +210,9 @@ const TREE_MARGIN = 3; // max canopy radius -- trees this close outside a chunk 
 function treeAt(x, z) {
   if (hash01(x, z, worldSet.seedNum) >= TREE_CHANCE) {
     return null;
+  }
+  if (biomeAt(x, z) !== PLAINS) {
+    return null; // trees only grow in the plains biome (not desert/ocean)
   }
   const h = surfaceHeight(x, z);
   if (h <= worldSet.waterLevel + 1) {
@@ -244,6 +299,39 @@ function placeTree(tree, x0, x1, z0, z1, info, infoList) {
   }
 }
 
+const CACTUS_CHANCE = 0.004; // per desert column -- deliberately very sparse
+
+// Returns the cactus rooted at column (x,z), or null. Deterministic. Cacti
+// are a single block-wide column (no overhang), so unlike trees they never
+// spill into neighbouring chunks and need no margin scan.
+function cactusAt(x, z) {
+  if (biomeAt(x, z) !== DESERT) {
+    return null; // cacti grow only in deserts
+  }
+  if (hash01(x, z, worldSet.seedNum + 7) >= CACTUS_CHANCE) {
+    return null;
+  }
+  const h = surfaceHeight(x, z);
+  if (h <= worldSet.waterLevel + 1) {
+    return null; // not on damp sand near water
+  }
+  const trunkH = 1 + Math.floor(hash01(x, z, worldSet.seedNum + 8) * 3); // 1-3
+  return { x, z, baseY: h + 1, topY: h + trunkH };
+}
+
+// Writes a cactus's blocks. Caller only invokes this for columns inside the
+// chunk, so no bounds check is needed.
+function placeCactus(cactus, info, infoList) {
+  for (let y = cactus.baseY; y <= cactus.topY; y++) {
+    const key = makeKey(cactus.x, y, cactus.z);
+    if (info[key]) {
+      continue; // never overwrite terrain
+    }
+    infoList.push(key);
+    info[key] = { pos: [cactus.x, y, cactus.z], texture: "cactus" };
+  }
+}
+
 // Generates terrain blocks for a batch of chunks, applies player edits,
 // then meshes them.
 function initialFill({ chunks, edits }) {
@@ -269,6 +357,16 @@ function initialFill({ chunks, edits }) {
         const tree = treeAt(x, z);
         if (tree) {
           placeTree(tree, x0, x0 + cS, z0, z0 + cS, info, infoList);
+        }
+      }
+    }
+
+    // cacti: single-column, no overhang, so only the chunk's own columns
+    for (let x = x0; x < x0 + cS; x++) {
+      for (let z = z0; z < z0 + cS; z++) {
+        const cactus = cactusAt(x, z);
+        if (cactus) {
+          placeCactus(cactus, info, infoList);
         }
       }
     }

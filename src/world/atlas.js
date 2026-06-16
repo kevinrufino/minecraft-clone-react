@@ -17,6 +17,7 @@ export const AMTmap = {
   bedrock: [2, 15],
   glass: [2, 13],
   leaves: [5, 13],
+  cactus: { top: [6, 12], side: [7, 12], bottom: [8, 12] },
   water: [15, 4], // not used for rendering (water draws as tinted material)
 };
 

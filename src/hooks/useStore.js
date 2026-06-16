@@ -1,12 +1,52 @@
 import create from "zustand";
 import { nanoid } from "nanoid";
+import settings from "../constants";
 
-// Global store for cross-component state: the currently selected texture and
-// everything related to online play (socket, other players, connection state).
-// World/block data intentionally lives outside this store (in refs) because
-// it changes every frame and zustand re-renders got in the way.
+// Render-distance bounds (in chunks). The auto-tuner and the pause-menu
+// slider share these limits.
+export const RENDER_MIN = 3;
+export const RENDER_MAX = 16;
+
+// First guess at render distance from device telemetry; PerformanceMonitor
+// then walks it up or down based on measured frame rate -- until the player
+// takes over with the pause-menu slider.
+function initialViewRadius() {
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || 4; // GB; undefined on Safari/Firefox
+  if (cores >= 8 && mem >= 8) return 6;
+  if (cores >= 4) return 5;
+  return 4;
+}
+
+// Render distance lives in the mutable `settings` global because the chunk
+// engine reads it every frame (see Cubes.jsx); the store value mirrors it so
+// React components (fog, the slider) re-render when it changes.
+function applyViewRadius(r) {
+  const next = Math.min(RENDER_MAX, Math.max(RENDER_MIN, r));
+  settings.viewRadius = next;
+  settings.outerViewRadius = next + 2;
+  return next;
+}
+
+// Global store for cross-component state: the currently selected texture,
+// render settings (FPS overlay + render distance), and everything related to
+// online play (socket, other players, connection state). World/block data
+// intentionally lives outside this store (in refs) because it changes every
+// frame and zustand re-renders got in the way.
 export const useStore = create((set, get) => ({
   texture: "dirt",
+
+  // ── render settings (driven by the pause menu) ──────────────────
+  showFPS: false,
+  toggleShowFPS: () => set((s) => ({ showFPS: !s.showFPS })),
+
+  viewRadius: applyViewRadius(initialViewRadius()),
+  // PerformanceMonitor auto-tunes render distance until the player drags the
+  // slider, which hands control over to them for the rest of the session
+  renderDistanceAuto: true,
+  setViewRadius: (r) => set(() => ({ viewRadius: applyViewRadius(r), renderDistanceAuto: false })),
+  autoAdjustViewRadius: (delta) =>
+    set((s) => (s.renderDistanceAuto ? { viewRadius: applyViewRadius(s.viewRadius + delta) } : {})),
 
   establishedConn: false,
   socket: null,

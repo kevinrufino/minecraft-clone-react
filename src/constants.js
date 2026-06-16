@@ -22,6 +22,11 @@ const settings = {
   outerViewRadius: 8, //distance (in chunks) we insure are built/ready to be shown
   renderDistPrecentage: 50 / 100,
   fillBatchSize: 10,
+  // how many ready chunks to mount (upload to the GPU) per frame. The worker
+  // can hand back a whole batch at once; mounting them all in one frame stalls
+  // the render thread, so we drain a few per frame instead. Higher = faster
+  // pop-in but more hitching; lower = smoother but slower to fill in.
+  chunkMountBudget: 4,
   workerCount: 3,
 
   showLoadingWorldBanner: true,
