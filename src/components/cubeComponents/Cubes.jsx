@@ -47,7 +47,12 @@ export const Cubes = ({
   const lastRenderChunk = useRef(spawnChunk);
   const chunks = useRef({}); // chunkKey -> {keys, count, visible, draw}
   const pendingFill = useRef(new Set()); // chunks queued but not yet generated
-  const activeChunks = useRef([]);
+  // mirror of chunkKeyList (the mounted <Chunk> set) for O(1) membership tests,
+  // plus a nearest-first queue of generated chunks still waiting to be mounted.
+  // Mounts are drained a few per frame (drainMountQueue) so the GPU uploads they
+  // trigger never spike the frame time.
+  const mountedSet = useRef(new Set());
+  const mountQueue = useRef([]);
   const playerChunkPosition = useRef("");
 
   const buildWorker = (id) => {
@@ -104,8 +109,9 @@ export const Cubes = ({
       chunks.current[ck] = worldFiller.testor[ck];
       pendingFill.current.delete(ck);
     });
-    setChunkKeyList((prev) => [...prev, ...worldFiller.chunkKeys]);
-    updateDisplayedChunks(playerChunkPosition.current || spawnChunk);
+    // queue any of these that are in view; drainMountQueue (in useFrame) mounts
+    // them a few per frame -- never the whole batch in one stalling commit
+    recomputeChunkSet(playerChunkPosition.current || spawnChunk);
 
     if (workerPendingJob.current.length == 0) {
       chunksMadeCounter.current.loaddone = true;
@@ -376,11 +382,11 @@ export const Cubes = ({
 
     tickWaterFlow();
 
-    // performance tuning changed the render distance
+    // performance tuning (or the pause-menu slider) changed the render distance
     if (lastRadius.current !== settings.viewRadius) {
       lastRadius.current = settings.viewRadius;
       fillMissingChunks(pChunk, settings.outerViewRadius);
-      updateDisplayedChunks(pChunk);
+      recomputeChunkSet(pChunk);
     }
 
     if (playerChunkPosition.current !== pChunk) {
@@ -393,8 +399,11 @@ export const Cubes = ({
         lastRenderChunk.current = pChunk;
         fillMissingChunks(pChunk, settings.outerViewRadius);
       }
-      updateDisplayedChunks(pChunk);
+      recomputeChunkSet(pChunk);
     }
+
+    // mount a few queued chunks per frame so geometry uploads stay spread out
+    drainMountQueue();
   });
 
   useEffect(() => {
@@ -426,25 +435,63 @@ export const Cubes = ({
     return () => setRemoteBlockApplier(null);
   }, []);
 
-  function updateDisplayedChunks(currentChunk) {
-    const chunksToDisplay = getNearbyChunkKeys(
-      currentChunk,
-      settings.viewRadius,
+  // Keep chunks mounted a little past the draw radius so small back-and-forth
+  // movements across a chunk border don't thrash mount/unmount.
+  const UNLOAD_MARGIN = 1;
+
+  // Recompute which generated chunks belong on screen around the player: rebuild
+  // the nearest-first queue of not-yet-mounted ones, and unmount any that
+  // drifted out of range (unmounting disposes their GPU geometry). Mounting is
+  // rate-limited in drainMountQueue -- this function never adds meshes itself.
+  function recomputeChunkSet(centerChunk) {
+    const desired = getNearbyChunkKeys(centerChunk, settings.viewRadius).filter(
+      (ck) => chunks.current[ck],
     );
-    const removeChunks = activeChunks.current.filter((ck) => {
-      return !chunksToDisplay.includes(ck);
-    });
-    removeChunks.forEach((ck) => {
-      if (chunks.current[ck]) {
-        chunks.current[ck].visible = false;
+
+    mountQueue.current = desired
+      .filter((ck) => !mountedSet.current.has(ck))
+      .sort(
+        (a, b) =>
+          distBetweenChunks(centerChunk, a) - distBetweenChunks(centerChunk, b),
+      );
+
+    const keepRadius = settings.viewRadius + UNLOAD_MARGIN;
+    let removed = false;
+    mountedSet.current.forEach((ck) => {
+      if (distBetweenChunks(centerChunk, ck) > keepRadius) {
+        mountedSet.current.delete(ck);
+        if (chunks.current[ck]) {
+          chunks.current[ck].visible = false;
+        }
+        removed = true;
       }
     });
-    chunksToDisplay.forEach((ck) => {
-      if (chunks.current[ck]) {
-        chunks.current[ck].visible = true;
+    if (removed) {
+      setChunkKeyList([...mountedSet.current]);
+    }
+  }
+
+  // Mount up to chunkMountBudget queued chunks this frame, nearest first. This
+  // is the throttle that turns a batch of ready chunks into a smooth stream of
+  // single-frame GPU uploads instead of one big stall.
+  function drainMountQueue() {
+    if (!mountQueue.current.length) {
+      return;
+    }
+    const budget = settings.chunkMountBudget;
+    let mounted = 0;
+    while (mounted < budget && mountQueue.current.length) {
+      const ck = mountQueue.current.shift();
+      if (mountedSet.current.has(ck) || !chunks.current[ck]) {
+        continue;
       }
-    });
-    activeChunks.current = chunksToDisplay;
+      chunks.current[ck].visible = true; // Chunk renders its mesh once visible
+      mountedSet.current.add(ck);
+      mounted++;
+    }
+    if (mounted > 0) {
+      setChunkKeyList([...mountedSet.current]);
+    }
   }
 
   return !FillerLoadDoneValue
