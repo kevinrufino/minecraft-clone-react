@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import settings from "../constants";
 import { useStore } from "../hooks/useStore";
 import { AtlasTile } from "./UIComponents/AtlasTile";
 
@@ -30,6 +31,9 @@ export const TextureSelector = ({ activeTextureREF }) => {
 
     // 1-9 select hotbar slots directly
     function handleKeyDown(event) {
+      if (settings.chatOpen) {
+        return; // typing a number in chat must not switch the hotbar
+      }
       const m = /^Digit([1-9])$/.exec(event.code);
       if (!m) {
         return;

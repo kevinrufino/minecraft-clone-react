@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import settings from "../constants";
 
 const keyActionMap = {
   KeyW: "moveForward",
@@ -84,6 +85,9 @@ export const useKeyboard = () => {
     },
   });
   const handleKeyDown = (e) => {
+    if (settings.chatOpen) {
+      return; // typing in chat -- don't move the player
+    }
     let action = actionByKey(e.code);
     if (action && !actions.current[action].on) {
       let actionObj = actions.current[action];

@@ -66,6 +66,13 @@ function connectSocket() {
     clearEdits();
     window.location.reload();
   });
+  // chat relayed from other players (server contract: broadcast to everyone
+  // except the sender, who already sees their own message optimistically)
+  sharedSocket.on("S_chat", ({ name, text }) => {
+    if (typeof text === "string" && text.length) {
+      useStore.getState().online_pushChat(name || "Player", text);
+    }
+  });
 
   // no server? fall back to single player instead of waiting forever
   setTimeout(() => {

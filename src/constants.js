@@ -23,6 +23,10 @@ const settings = {
   // (see LowerControlStrip). Ignored in desktop/mouse mode.
   breakMode: false,
 
+  // set true while the in-game chat input is focused so the keyboard/hotbar
+  // handlers ignore typing (see useKeyboard, TextureSelector, Chat)
+  chatOpen: false,
+
   viewRadius: 6, //distance (in chunks) from current chunk that chunks are shown
   outerViewRadius: 8, //distance (in chunks) we insure are built/ready to be shown
   renderDistPrecentage: 50 / 100,

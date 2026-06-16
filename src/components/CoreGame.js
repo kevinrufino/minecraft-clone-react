@@ -9,6 +9,7 @@ import { OrbitControls } from "@react-three/drei";
 import { LoadingWorldScreen } from "./UIComponents/LoadingWorldScreen";
 import PauseOverlay from "./UIComponents/PauseOverlay";
 import { PlayerList } from "./UIComponents/PlayerList";
+import { Chat } from "./UIComponents/Chat";
 import { Inventory } from "./UIComponents/Inventory";
 import { DayNight } from "./effects/DayNight";
 import { Clouds } from "./effects/Clouds";
@@ -173,6 +174,7 @@ const CoreGame = () => {
       {!settings.ignoreCameraFollowPlayer && <div className="cursor centered absolute">+</div>}
       <TextureSelector activeTextureREF={activeTextureREF} />
       <PlayerList />
+      <Chat />
       <Inventory />
       <PauseOverlay />
     </>
