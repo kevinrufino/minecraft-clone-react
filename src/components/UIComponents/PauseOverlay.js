@@ -8,6 +8,7 @@ const CONTROLS = [
   ["Left click", "Place block"],
   ["Right click", "Break block"],
   ["1-5 / Wheel", "Select block"],
+  ["M", "Mute sound"],
   ["Esc", "Pause"],
 ];
 
