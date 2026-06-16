@@ -114,12 +114,15 @@ function biomeAt(x, z) {
   return PLAINS;
 }
 
-// Deterministic per-position hash in [0,1) -- trees must land on the same
-// columns no matter which chunk (or which worker) generates them.
+// Deterministic per-position hash in [0,1) -- trees and cacti must land on the
+// same columns no matter which chunk (or which worker) generates them. The
+// shifts must be unsigned (>>>): a signed >> sign-extends, which forces the
+// result's top bit to 0 and caps the output at 0.5 (so e.g. floor(hash01*3)
+// could never reach 2 and the rare "big tree" branch never fired).
 function hash01(x, z, salt) {
   let h = (x | 0) * 374761393 + (z | 0) * 668265263 + salt * 1274126177;
-  h = (h ^ (h >> 13)) * 1103515245;
-  h = h ^ (h >> 16);
+  h = (h ^ (h >>> 13)) * 1103515245;
+  h = h ^ (h >>> 16);
   return (h >>> 0) / 4294967296;
 }
 
@@ -296,6 +299,39 @@ function placeTree(tree, x0, x1, z0, z1, info, infoList) {
   }
 }
 
+const CACTUS_CHANCE = 0.004; // per desert column -- deliberately very sparse
+
+// Returns the cactus rooted at column (x,z), or null. Deterministic. Cacti
+// are a single block-wide column (no overhang), so unlike trees they never
+// spill into neighbouring chunks and need no margin scan.
+function cactusAt(x, z) {
+  if (biomeAt(x, z) !== DESERT) {
+    return null; // cacti grow only in deserts
+  }
+  if (hash01(x, z, worldSet.seedNum + 7) >= CACTUS_CHANCE) {
+    return null;
+  }
+  const h = surfaceHeight(x, z);
+  if (h <= worldSet.waterLevel + 1) {
+    return null; // not on damp sand near water
+  }
+  const trunkH = 1 + Math.floor(hash01(x, z, worldSet.seedNum + 8) * 3); // 1-3
+  return { x, z, baseY: h + 1, topY: h + trunkH };
+}
+
+// Writes a cactus's blocks. Caller only invokes this for columns inside the
+// chunk, so no bounds check is needed.
+function placeCactus(cactus, info, infoList) {
+  for (let y = cactus.baseY; y <= cactus.topY; y++) {
+    const key = makeKey(cactus.x, y, cactus.z);
+    if (info[key]) {
+      continue; // never overwrite terrain
+    }
+    infoList.push(key);
+    info[key] = { pos: [cactus.x, y, cactus.z], texture: "cactus" };
+  }
+}
+
 // Generates terrain blocks for a batch of chunks, applies player edits,
 // then meshes them.
 function initialFill({ chunks, edits }) {
@@ -321,6 +357,16 @@ function initialFill({ chunks, edits }) {
         const tree = treeAt(x, z);
         if (tree) {
           placeTree(tree, x0, x0 + cS, z0, z0 + cS, info, infoList);
+        }
+      }
+    }
+
+    // cacti: single-column, no overhang, so only the chunk's own columns
+    for (let x = x0; x < x0 + cS; x++) {
+      for (let z = z0; z < z0 + cS; z++) {
+        const cactus = cactusAt(x, z);
+        if (cactus) {
+          placeCactus(cactus, info, infoList);
         }
       }
     }
