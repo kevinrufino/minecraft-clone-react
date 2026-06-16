@@ -27,8 +27,14 @@ export const Cubes = ({
   const worldSettings = settings.worldSettings;
   const renderDistPrecentage = settings.renderDistPrecentage;
 
-  // i believe for most machines 4 workers is the effective limit but i am using 3 to be safe
-  const workerCount = settings.workerCount;
+  // Chunk generation is CPU-bound and bursty (only while streaming), so scale
+  // the pool with available cores -- leaving one for the main/render thread --
+  // instead of a fixed count. settings.workerCount is the floor/fallback when
+  // hardwareConcurrency is unavailable; capped to avoid oversubscription.
+  const workerCount = Math.max(
+    settings.workerCount,
+    Math.min(8, (navigator.hardwareConcurrency || settings.workerCount + 1) - 1),
+  );
   const workerPendingJob = useRef([]);
   const workerWorking = useRef(new Array(workerCount).fill(true));
   const workerList = useRef(new Array(workerCount).fill(""));
