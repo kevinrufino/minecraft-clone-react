@@ -9,6 +9,7 @@ import { OrbitControls } from "@react-three/drei";
 import { LoadingWorldScreen } from "./UIComponents/LoadingWorldScreen";
 import PauseOverlay from "./UIComponents/PauseOverlay";
 import { PlayerList } from "./UIComponents/PlayerList";
+import { Inventory } from "./UIComponents/Inventory";
 import { DayNight } from "./effects/DayNight";
 import { Clouds } from "./effects/Clouds";
 import { BlockOutline } from "./effects/BlockOutline";
@@ -84,6 +85,38 @@ const CoreGame = () => {
     };
   }, []);
 
+  // E toggles the creative inventory. Opening it releases the pointer lock so
+  // the cursor can click blocks; closing re-locks to resume play. (PauseOverlay
+  // checks inventoryOpen so it stays hidden while the inventory is up.)
+  useEffect(() => {
+    if (settings.movewithJOY_BOOL) {
+      return; // touch devices use the on-screen UI, not pointer lock
+    }
+    function requestLock() {
+      const canvas = document.querySelector("canvas");
+      if (canvas) {
+        canvas.requestPointerLock();
+      }
+    }
+    function onKey(e) {
+      const st = useStore.getState();
+      if (e.code === "KeyE") {
+        if (st.inventoryOpen) {
+          st.setInventoryOpen(false);
+          requestLock();
+        } else if (document.pointerLockElement) {
+          // only open while actively playing (not from the pause/title screen)
+          st.setInventoryOpen(true);
+          document.exitPointerLock();
+        }
+      } else if (e.code === "Escape" && st.inventoryOpen) {
+        st.setInventoryOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const fogFar = viewRadius * settings.worldSettings.chunkSize;
   return (
     <>
@@ -125,6 +158,7 @@ const CoreGame = () => {
       {!settings.ignoreCameraFollowPlayer && <div className="cursor centered absolute">+</div>}
       <TextureSelector activeTextureREF={activeTextureREF} />
       <PlayerList />
+      <Inventory />
       <PauseOverlay />
     </>
   );
