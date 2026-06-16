@@ -5,6 +5,8 @@ export const ATLAS_GRID_SIZE = 16;
 export const ATLAS_UV_SIZE = 1 / ATLAS_GRID_SIZE;
 
 // Either a single [col, row] tile for all faces, or { top, side, bottom }.
+// Tiles are 1-indexed [col, row] from the bottom-left of the 16x16 atlas, i.e.
+// [tx + 1, 16 - ty] for the (tx, ty) tile of the classic terrain.png layout.
 export const AMTmap = {
   grass: { top: [1, 16], side: [4, 16], bottom: [3, 16] },
   dirt: [3, 16],
@@ -19,6 +21,27 @@ export const AMTmap = {
   leaves: [5, 13],
   cactus: { top: [6, 12], side: [7, 12], bottom: [8, 12] },
   water: [15, 4], // not used for rendering (water draws as tinted material)
+
+  // ── extra placeable blocks (creative inventory) ──────────────────
+  gravel: [4, 15],
+  brick: [8, 16],
+  bookshelf: { top: [5, 16], side: [4, 14], bottom: [5, 16] },
+  mossyCobblestone: [5, 14],
+  obsidian: [6, 14],
+  sponge: [1, 13],
+  wool: [1, 12],
+  snow: [3, 12],
+  ice: [4, 12],
+  clay: [9, 12],
+  coalOre: [3, 14],
+  ironOre: [2, 14],
+  goldOre: [1, 14],
+  diamondOre: [3, 13],
+  redstoneOre: [4, 13],
+  ironBlock: [7, 15],
+  goldBlock: [8, 15],
+  diamondBlock: [9, 15],
+  tnt: { top: [10, 16], side: [9, 16], bottom: [11, 16] },
 };
 
 export const AMTmapkeys = Object.keys(AMTmap);
