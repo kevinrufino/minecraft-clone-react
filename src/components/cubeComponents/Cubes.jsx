@@ -267,6 +267,41 @@ export const Cubes = ({
     });
   }
 
+  // ---- sand gravity (Minecraft-style) ----
+  // Sand only falls in response to a block update (placing it, or removing
+  // whatever was under it) -- it does not auto-collapse generated terrain.
+  // A falling block drops one cell per tick until something solid stops it,
+  // sinking through water on the way down.
+  const SAND_TICK_MS = 80;
+  const sandQueue = useRef([]);
+  const lastSandTick = useRef(0);
+
+  function tickSandFall() {
+    const now = performance.now();
+    if (!sandQueue.current.length || now - lastSandTick.current < SAND_TICK_MS) {
+      return;
+    }
+    lastSandTick.current = now;
+    const batch = sandQueue.current.splice(0, 128);
+    batch.forEach(([x, y, z]) => {
+      const here = REF_ALLCUBES.current[makeKey(x, y, z)];
+      if (!here || here.texture !== "sand") {
+        return;
+      }
+      if (y - 1 <= worldSettings.minY) {
+        return; // resting on the bedrock floor
+      }
+      const below = REF_ALLCUBES.current[makeKey(x, y - 1, z)];
+      // fall into empty space, or sink through water
+      if (!below || below.texture === "water") {
+        applyBlockChange({ type: "remove", pos: [x, y, z] });
+        applyBlockChange({ type: "add", pos: [x, y - 1, z], texture: "sand" });
+        // keep falling, and let any sand stacked above this column drop too
+        sandQueue.current.push([x, y - 1, z], [x, y + 1, z]);
+      }
+    });
+  }
+
   // Single entry point for every block mutation: local clicks, remote
   // players, and persisted-edit replay all flow through here.
   function applyBlockChange(event) {
@@ -275,9 +310,14 @@ export const Cubes = ({
     if (event.type === "remove") {
       // neighboring water may flow into the new hole
       enqueueFlowAround(event.pos);
+      // sand resting directly above the removed block is now unsupported
+      sandQueue.current.push([event.pos[0], event.pos[1] + 1, event.pos[2]]);
     } else if (event.texture === "water") {
       // newly placed/flowed water may keep spreading
       flowQueue.current.push([...event.pos]);
+    } else if (event.texture === "sand") {
+      // freshly placed sand may need to fall
+      sandQueue.current.push([...event.pos]);
     }
 
     const ck = chunkKeyFromPosition(
@@ -381,6 +421,7 @@ export const Cubes = ({
     }
 
     tickWaterFlow();
+    tickSandFall();
 
     // performance tuning (or the pause-menu slider) changed the render distance
     if (lastRadius.current !== settings.viewRadius) {
