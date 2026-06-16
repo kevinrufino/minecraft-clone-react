@@ -7,6 +7,9 @@ const settings = {
   // when online, connect to the deployed ReactMineCraftCloneServer instead of localhost
   useRemoteServer: false,
   playerName: "Player",
+  // id of the active singleplayer save (set from the title screen); the world's
+  // block edits are loaded/saved under this id
+  currentSaveId: null,
 
   showPlayer: true,
   showOtherPlayers: true,

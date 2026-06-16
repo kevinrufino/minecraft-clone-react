@@ -8,7 +8,7 @@ function App() {
   const [playerConfigReady, setPCR] = useState(false);
   const establishedConn = useOnlineConnection(playerConfigReady);
 
-  // Called by the title screen once the player has picked name/seed/mode.
+  // Called by the title screen once the player has picked a world/mode.
   function playerGivenGameSettings(config) {
     settings.movewithJOY_BOOL = config.movewithJOY_BOOL;
     settings.onlineEnabled = config.onlineEnabled;
@@ -18,6 +18,7 @@ function App() {
     if (config.seed) {
       settings.worldSettings.seed = config.seed;
     }
+    settings.currentSaveId = config.saveId || null;
     setPCR(true);
   }
 

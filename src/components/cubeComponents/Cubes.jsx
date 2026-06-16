@@ -400,7 +400,7 @@ export const Cubes = ({
   useEffect(() => {
     if (!workerList.current[0]) {
       if (!settings.onlineEnabled) {
-        const loaded = loadEdits(worldSettings.seed);
+        const loaded = loadEdits(settings.currentSaveId || worldSettings.seed);
         if (loaded) {
           console.log(`Loaded ${loaded} saved block edits`);
         }

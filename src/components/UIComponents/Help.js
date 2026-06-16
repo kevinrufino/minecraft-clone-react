@@ -13,7 +13,7 @@ export const Help = () => {
       <br />
       Remove Block: LMB
       <br />
-      Select Block: Scroll | #1-5
+      Select Block: Scroll | #1-9
     </div>
   );
 };
