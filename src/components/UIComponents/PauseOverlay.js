@@ -12,6 +12,7 @@ const CONTROLS = [
   ["Right click", "Break block"],
   ["1-9 / Wheel", "Select block"],
   ["M", "Mute sound"],
+  ["E", "Inventory"],
   ["Esc", "Pause"],
 ];
 
@@ -83,6 +84,8 @@ const PauseOverlay = () => {
   const [overwriteId, setOverwriteId] = useState(null);
   const [saves, setSaves] = useState([]);
 
+  const inventoryOpen = useStore((s) => s.inventoryOpen);
+
   useEffect(() => {
     function onLockChange() {
       const isLocked = !!document.pointerLockElement;
@@ -96,6 +99,10 @@ const PauseOverlay = () => {
 
   // Don't render anything on touch/joystick devices
   if (settings.movewithJOY_BOOL) return null;
+
+  // The creative inventory releases pointer lock on purpose — don't treat that
+  // as a pause
+  if (inventoryOpen) return null;
 
   // Pointer is locked — game is running, no overlay needed
   if (locked) return null;

@@ -48,6 +48,22 @@ export const useStore = create((set, get) => ({
   autoAdjustViewRadius: (delta) =>
     set((s) => (s.renderDistanceAuto ? { viewRadius: applyViewRadius(s.viewRadius + delta) } : {})),
 
+  // 9 hotbar slots, each holding a block name; the selected slot is the
+  // block that gets placed. Assignable from the creative inventory (E).
+  hotbar: [
+    "grass",
+    "dirt",
+    "stone",
+    "cobblestone",
+    "sand",
+    "log",
+    "wood",
+    "glass",
+    "leaves",
+  ],
+  selectedSlot: 0,
+  inventoryOpen: false,
+
   establishedConn: false,
   socket: null,
   players: {},
@@ -57,6 +73,20 @@ export const useStore = create((set, get) => ({
     set(() => ({
       texture,
     }));
+  },
+
+  setSelectedSlot: (selectedSlot) => {
+    set(() => ({ selectedSlot }));
+  },
+  setHotbarSlot: (index, block) => {
+    set((state) => {
+      const hotbar = [...state.hotbar];
+      hotbar[index] = block;
+      return { hotbar };
+    });
+  },
+  setInventoryOpen: (inventoryOpen) => {
+    set(() => ({ inventoryOpen }));
   },
 
   online_addCube: (pos, texture) => {
