@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Chunk } from "./Chunk";
+import { FallingSand } from "./FallingSand";
 import { useFrame, useThree } from "@react-three/fiber";
 import settings from "../../constants";
 import {
@@ -267,22 +268,27 @@ export const Cubes = ({
     });
   }
 
-  // ---- sand gravity (Minecraft-style) ----
+  // ---- sand gravity (Minecraft-style, smooth) ----
   // Sand only falls in response to a block update (placing it, or removing
   // whatever was under it) -- it does not auto-collapse generated terrain.
-  // A falling block drops one cell per tick until something solid stops it,
-  // sinking through water on the way down.
-  const SAND_TICK_MS = 80;
-  const sandQueue = useRef([]);
-  const lastSandTick = useRef(0);
+  // When a sand block loses support it is detached from the grid into a
+  // falling "entity" ({x, z, y(float), vy}) that accelerates downward and is
+  // drawn by <FallingSand>. On landing it converts back into a grid block, so
+  // the block visibly glides down a cliff instead of teleporting one cell per
+  // tick (#53). Falling sand sinks through water and rests on the first solid.
+  const SAND_GRAVITY = -32; // blocks/s^2 -- heavier/snappier than the player
+  const SAND_TERMINAL = -16; // max fall speed (blocks/s)
+  const SAND_REST_HOLD_MS = 140; // keep a landed cube drawn until its block meshes in
+  const sandQueue = useRef([]); // cells to (re)check for support
+  const fallingSand = useRef([]); // active falling entities
 
+  // Detect sand blocks that have lost support and detach them into entities.
+  // Cheap enough to run every frame -- it only touches queued cells.
   function tickSandFall() {
-    const now = performance.now();
-    if (!sandQueue.current.length || now - lastSandTick.current < SAND_TICK_MS) {
+    if (!sandQueue.current.length) {
       return;
     }
-    lastSandTick.current = now;
-    const batch = sandQueue.current.splice(0, 128);
+    const batch = sandQueue.current.splice(0, 256);
     batch.forEach(([x, y, z]) => {
       const here = REF_ALLCUBES.current[makeKey(x, y, z)];
       if (!here || here.texture !== "sand") {
@@ -292,14 +298,69 @@ export const Cubes = ({
         return; // resting on the bedrock floor
       }
       const below = REF_ALLCUBES.current[makeKey(x, y - 1, z)];
-      // fall into empty space, or sink through water
+      // unsupported (empty or water below): detach and let it fall smoothly.
+      // applyBlockChange(remove) also re-queues the cell above, so a stack of
+      // sand collapses cell by cell as each block below leaves.
       if (!below || below.texture === "water") {
         applyBlockChange({ type: "remove", pos: [x, y, z] });
-        applyBlockChange({ type: "add", pos: [x, y - 1, z], texture: "sand" });
-        // keep falling, and let any sand stacked above this column drop too
-        sandQueue.current.push([x, y - 1, z], [x, y + 1, z]);
+        fallingSand.current.push({ x, z, y, vy: 0, landedAt: null });
       }
     });
+  }
+
+  // Where a falling sand cube in column (x,z) comes to rest: on top of the
+  // first solid (non-water) block below `fromY`, or the bedrock floor.
+  function sandLandingY(x, z, fromY) {
+    const { minY } = worldSettings;
+    for (let yy = Math.floor(fromY) - 1; yy > minY; yy--) {
+      const cell = REF_ALLCUBES.current[makeKey(x, yy, z)];
+      if (cell && cell.texture !== "water") {
+        return yy + 1;
+      }
+    }
+    return minY + 1;
+  }
+
+  // Integrate every falling sand entity. Resolved lowest-first per column so
+  // stacked falls land in order; a `columnFloor` tracks the next free slot so
+  // cubes pile up instead of overlapping.
+  function tickFallingSand(dt) {
+    const list = fallingSand.current;
+    if (!list.length) {
+      return;
+    }
+    const now = performance.now();
+    list.sort((a, b) => a.y - b.y);
+    const columnFloor = {};
+    list.forEach((ent) => {
+      const colKey = `${ent.x}.${ent.z}`;
+      if (ent.landedAt != null) {
+        // already a block again; just reserve its slot for cubes stacking above
+        columnFloor[colKey] = Math.max(columnFloor[colKey] ?? -Infinity, ent.y + 1);
+        return;
+      }
+      if (columnFloor[colKey] === undefined) {
+        columnFloor[colKey] = sandLandingY(ent.x, ent.z, ent.y);
+      }
+      ent.vy = Math.max(SAND_TERMINAL, ent.vy + SAND_GRAVITY * dt);
+      ent.y += ent.vy * dt;
+      const land = columnFloor[colKey];
+      if (ent.y <= land) {
+        ent.y = land;
+        ent.vy = 0;
+        ent.landedAt = now;
+        applyBlockChange({ type: "add", pos: [ent.x, land, ent.z], texture: "sand" });
+        columnFloor[colKey] = land + 1;
+      } else {
+        // don't let a higher cube in this column overtake this one
+        columnFloor[colKey] = Math.max(columnFloor[colKey], Math.ceil(ent.y));
+      }
+    });
+    // drop landed cubes once their grid block has had time to mesh in, so the
+    // visual hand-off from entity to block is seamless
+    fallingSand.current = list.filter(
+      (e) => e.landedAt == null || now - e.landedAt < SAND_REST_HOLD_MS,
+    );
   }
 
   // Single entry point for every block mutation: local clicks, remote
@@ -398,7 +459,7 @@ export const Cubes = ({
 
   const lastRadius = useRef(settings.viewRadius);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (process.env.NODE_ENV === "development") {
       window.__chunkDebug = {
         chunks: Object.keys(chunks.current).length,
@@ -422,6 +483,7 @@ export const Cubes = ({
 
     tickWaterFlow();
     tickSandFall();
+    tickFallingSand(Math.min(delta, 0.05)); // clamp big frame gaps so cubes can't tunnel
 
     // performance tuning (or the pause-menu slider) changed the render distance
     if (lastRadius.current !== settings.viewRadius) {
@@ -535,18 +597,22 @@ export const Cubes = ({
     }
   }
 
-  return !FillerLoadDoneValue
-    ? null
-    : chunkKeyList.map((ck) => {
-        return (
-          <Chunk
-            key={`cubechunk${ck}`}
-            chunkKey={ck}
-            chunkProps={chunks}
-            activeTextureREF={activeTextureREF}
-            REF_ALLCUBES={REF_ALLCUBES}
-            applyBlockChange={applyBlockChange}
-          />
-        );
-      });
+  return (
+    <>
+      <FallingSand fallingSandRef={fallingSand} />
+      {FillerLoadDoneValue &&
+        chunkKeyList.map((ck) => {
+          return (
+            <Chunk
+              key={`cubechunk${ck}`}
+              chunkKey={ck}
+              chunkProps={chunks}
+              activeTextureREF={activeTextureREF}
+              REF_ALLCUBES={REF_ALLCUBES}
+              applyBlockChange={applyBlockChange}
+            />
+          );
+        })}
+    </>
+  );
 };
