@@ -35,6 +35,46 @@ function waterTopFrac(flow) {
   return 0.3 + 0.55 * ((flow - 1) / 3);
 }
 
+// Surface fraction of the water cell at (nx,ny,nz), or null if that column
+// isn't a water *surface* cell at this level (not water, or submerged with
+// water directly above). Used to average corner heights between neighbours so
+// the surface slopes smoothly instead of stepping between flow levels.
+function waterSurfaceFracAt(blocks, nx, ny, nz, t2) {
+  const cell = blocks[makeKey(nx, ny, nz)];
+  if (!cell || cell.texture !== "water") {
+    return null;
+  }
+  const above = blocks[makeKey(nx, ny + t2, nz)];
+  if (above && above.texture === "water") {
+    return null; // submerged -- its surface is higher up, not here
+  }
+  return waterTopFrac(cell.flow);
+}
+
+// Height of a water surface corner, averaged over the (up to 4) surface water
+// columns that meet at it. dx/dz pick which diagonal corner (each ±1 in block
+// units). The cell itself always contributes, so a corner shared by cells of
+// different flow lands halfway between them -- turning the per-cell steps into
+// a continuous sloped surface.
+function waterCornerY(blocks, nx, ny, nz, dx, dz, y, t, t2) {
+  let sum = 0;
+  let count = 0;
+  for (const [ox, oz] of [
+    [0, 0],
+    [dx * t2, 0],
+    [0, dz * t2],
+    [dx * t2, dz * t2],
+  ]) {
+    const frac = waterSurfaceFracAt(blocks, nx + ox, ny, nz + oz, t2);
+    if (frac != null) {
+      sum += frac;
+      count++;
+    }
+  }
+  const frac = count > 0 ? sum / count : waterTopFrac(null);
+  return y - t + t2 * frac;
+}
+
 // A face is hidden when its neighbor fully covers it:
 // - opaque blocks cull against opaque neighbors
 // - transparent blocks cull against the same texture (water-water,
@@ -85,15 +125,17 @@ export function genFaceArrays(t, blocks, chunkBlocks) {
     c[8] = [x + t, y + t, z - t];
 
     // a water cell with air above is a surface cell -- drop its top (and the
-    // top edges of its side faces) so flowing water reads as a sloping stream
+    // top edges of its side faces). Each top corner is averaged with the
+    // neighbouring surface cells that meet there, so adjacent flow levels
+    // slope into each other smoothly instead of stepping. Corners c3/c4/c7/c8
+    // are shared by the top and the side faces, so the side tops follow too.
     if (texture === "water") {
       const above = blocks[makeKey(nx, ny + t2, nz)];
       if (!above || above.texture !== "water") {
-        const topY = y - t + t2 * waterTopFrac(block.flow);
-        c[3][1] = topY;
-        c[4][1] = topY;
-        c[7][1] = topY;
-        c[8][1] = topY;
+        c[3][1] = waterCornerY(blocks, nx, ny, nz, -1, 1, y, t, t2); // -x +z
+        c[4][1] = waterCornerY(blocks, nx, ny, nz, 1, 1, y, t, t2); //  +x +z
+        c[7][1] = waterCornerY(blocks, nx, ny, nz, -1, -1, y, t, t2); // -x -z
+        c[8][1] = waterCornerY(blocks, nx, ny, nz, 1, -1, y, t, t2); //  +x -z
       }
     }
 
