@@ -34,6 +34,10 @@ function initializeWorker(init) {
   worldSet.contNoise = createNoise2D(alea(worldSet.seed + "-cont")); // land/ocean
   worldSet.tempNoise = createNoise2D(alea(worldSet.seed + "-temp")); // desert/plains
   worldSet.detailNoise = createNoise2D(alea(worldSet.seed + "-detail"));
+  // low-frequency mask that decides, per column, whether caves are allowed to
+  // breach the surface skin (see entranceCapDepth) -- so openings cluster into
+  // a few natural regions instead of pocking the whole map
+  worldSet.entranceNoise = createNoise2D(alea(worldSet.seed + "-entrance"));
   worldSet.seedNum = String(worldSet.seed)
     .split("")
     .reduce((a, c) => a + c.charCodeAt(0) * 31, 7);
@@ -61,6 +65,38 @@ const CHEESE_THRESHOLD = 0.4; // smaller -> more open volume carved out
 // Spaghetti tunnels -- thin passages that connect the rooms.
 const TUNNEL_SCALE = 1 / 40; // larger divisor -> wider, more spread-out tunnels
 const TUNNEL_THRESHOLD = 0.06; // larger -> wider/more tunnels
+
+// Surface cave entrances. By default columnBlocks preserves the top
+// SURFACE_CAP blocks so caves never breach the surface. In rare regions
+// picked by entranceNoise we lift that cap toward 0 so caves that happen to
+// reach the surface punch a natural, walkable opening -- making caves
+// discoverable without digging straight down. Spawn stays protected.
+const SURFACE_CAP = 4; // blocks of surface skin kept solid where no entrance
+const ENTRANCE_SCALE = 1 / 130; // larger divisor -> bigger, rarer entrance zones
+const ENTRANCE_THRESHOLD = 0.66; // higher -> fewer columns eligible for openings
+const ENTRANCE_FEATHER = 0.16; // noise band over which the cap ramps 4 -> 0
+const SPAWN_SAFE_RADIUS = 32; // no entrances within this many blocks of origin
+const SPAWN_SAFE_FEATHER = 24; // entrances ramp back in over this outer band
+
+// How many surface blocks to keep solid at column (x,z). Normally SURFACE_CAP;
+// drops toward 0 inside entrance regions (and only well away from spawn) so
+// caves there can open to the sky.
+function entranceCapDepth(x, z) {
+  const m = (worldSet.entranceNoise(x * ENTRANCE_SCALE, z * ENTRANCE_SCALE) + 1) / 2;
+  const inRegion = smoothstep(
+    ENTRANCE_THRESHOLD,
+    ENTRANCE_THRESHOLD + ENTRANCE_FEATHER,
+    m,
+  );
+  const dist = Math.hypot(x, z);
+  const awayFromSpawn = smoothstep(
+    SPAWN_SAFE_RADIUS,
+    SPAWN_SAFE_RADIUS + SPAWN_SAFE_FEATHER,
+    dist,
+  );
+  const strength = inRegion * awayFromSpawn; // 0 = capped, 1 = fully open
+  return Math.round(SURFACE_CAP * (1 - strength));
+}
 
 function isCave(x, y, z) {
   // open cheese cavern
@@ -173,11 +209,17 @@ function columnBlocks(x, z, info, infoList) {
   // sand surface in deserts, on ocean/lake floors, and on beaches near water
   const sandy = biome === DESERT || biome === OCEAN || h <= waterLevel + 1;
 
+  // how much surface skin stays solid: full cap underwater/on beaches (keeps
+  // ocean floors intact), but reduced inland inside rare entrance regions so
+  // caves can break the surface there
+  const cap =
+    h > waterLevel + 1 ? entranceCapDepth(x, z) : SURFACE_CAP;
+
   for (let y = minY; y <= h; y++) {
-    // carve caves out of the stone interior: skip the surface skin (top 4
-    // blocks) so terrain stays capped, and keep bedrock + one block above it
-    // as a solid floor so caves never bottom out into the void
-    if (y > minY + 1 && y <= h - 4 && isCave(x, y, z)) {
+    // carve caves out of the stone interior: skip the preserved surface skin
+    // (cap blocks, normally 4) so terrain stays capped, and keep bedrock + one
+    // block above it as a solid floor so caves never bottom out into the void
+    if (y > minY + 1 && y <= h - cap && isCave(x, y, z)) {
       continue;
     }
     let texture;
