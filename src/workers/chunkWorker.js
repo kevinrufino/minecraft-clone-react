@@ -24,9 +24,11 @@ onmessage = (e) => {
 function initializeWorker(init) {
   worldSet = { ...init.worldSettings };
   worldSet.genNoise2D = createNoise2D(alea(worldSet.seed));
-  // two independent 3D fields drive the cave carve (see isCave)
+  // cave carve uses three 3D fields (see isCave): A+B intersect into thin
+  // spaghetti tunnels, C carves big open cheese caverns
   worldSet.caveNoiseA = createNoise3D(alea(worldSet.seed + "-caveA"));
   worldSet.caveNoiseB = createNoise3D(alea(worldSet.seed + "-caveB"));
+  worldSet.caveNoiseC = createNoise3D(alea(worldSet.seed + "-caveC"));
   worldSet.seedNum = String(worldSet.seed)
     .split("")
     .reduce((a, c) => a + c.charCodeAt(0) * 31, 7);
@@ -34,20 +36,52 @@ function initializeWorker(init) {
   postMessage({ init: true });
 }
 
-// "Spaghetti" caves: where two independent 3D noise fields are both near
-// zero, their iso-surfaces intersect along winding tube-like channels --
-// the same trick modern Minecraft uses for noise caves. It's purely a
-// function of (x,y,z), so it stays consistent across chunk borders and
-// workers without any worm-tracing or cross-chunk bookkeeping.
-const CAVE_SCALE = 1 / 24; // larger -> wider, sparser caverns
-const CAVE_THRESHOLD = 0.1; // larger -> more/bigger caves
+// Caves come in two flavours, like modern Minecraft:
+//
+//  - "Cheese" caverns: a single 3D noise field carves out whole volumes
+//    wherever it rises past a threshold. Because it removes a 3D region (not
+//    the intersection of two surfaces) these are big, open rooms you can
+//    actually walk around in.
+//  - "Spaghetti" tunnels: where two other 3D fields are both near zero their
+//    iso-surfaces intersect along thin winding channels, which link the
+//    cheese rooms together.
+//
+// Everything is a pure function of (x,y,z), so caves stay seamless across
+// chunk borders and workers with no worm-tracing or cross-chunk bookkeeping.
+
+// Cheese caverns -- the open space. Lower threshold -> more/larger rooms.
+const CHEESE_SCALE = 1 / 22; // larger divisor -> bigger rooms
+const CHEESE_THRESHOLD = 0.4; // smaller -> more open volume carved out
+
+// Spaghetti tunnels -- thin passages that connect the rooms.
+const TUNNEL_SCALE = 1 / 40; // larger divisor -> wider, more spread-out tunnels
+const TUNNEL_THRESHOLD = 0.06; // larger -> wider/more tunnels
+
 function isCave(x, y, z) {
-  const a = worldSet.caveNoiseA(x * CAVE_SCALE, y * CAVE_SCALE, z * CAVE_SCALE);
-  if (Math.abs(a) > CAVE_THRESHOLD) {
+  // open cheese cavern
+  const c = worldSet.caveNoiseC(
+    x * CHEESE_SCALE,
+    y * CHEESE_SCALE,
+    z * CHEESE_SCALE
+  );
+  if (c > CHEESE_THRESHOLD) {
+    return true;
+  }
+  // spaghetti tunnel: both fields near zero at the same point
+  const a = worldSet.caveNoiseA(
+    x * TUNNEL_SCALE,
+    y * TUNNEL_SCALE,
+    z * TUNNEL_SCALE
+  );
+  if (Math.abs(a) > TUNNEL_THRESHOLD) {
     return false;
   }
-  const b = worldSet.caveNoiseB(x * CAVE_SCALE, y * CAVE_SCALE, z * CAVE_SCALE);
-  return Math.abs(b) <= CAVE_THRESHOLD;
+  const b = worldSet.caveNoiseB(
+    x * TUNNEL_SCALE,
+    y * TUNNEL_SCALE,
+    z * TUNNEL_SCALE
+  );
+  return Math.abs(b) <= TUNNEL_THRESHOLD;
 }
 
 // Deterministic per-position hash in [0,1) -- trees must land on the same

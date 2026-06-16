@@ -34,7 +34,7 @@ const settings = {
     chunkSize: 8, //this squared is the number of block columns in each chunk
     heightFactor: 12, //how high up noise can make hills
     waterLevel: 0, //columns below this height fill with water
-    minY: -7, //bedrock floor
+    minY: -64, //bedrock floor -- deep so caves have lots of vertical room to generate
   },
 };
 
