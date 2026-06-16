@@ -18,7 +18,7 @@ That's it — the chunk worker is bundled automatically by react-scripts.
 
 - `WASD` to move, `Space` to jump, double-tap a movement key to sprint
 - Left click places a block, right click removes one
-- `1-5` or mouse wheel to change the active texture (enable the texture
+- `1-9` or mouse wheel to change the active texture (enable the texture
   selector in the debug panel)
 - The Leva panel (top right) toggles FPS stats, sky, orbital controls, and UI
 

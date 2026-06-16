@@ -342,6 +342,288 @@ body {
   text-shadow: 1px 1px 0 #000;
 }
 
+/* ── Main menu (three choices) ──────────────────────────────────── */
+
+.ts-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mc-menu-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 12px 14px;
+  font-family: "Courier New", Courier, monospace;
+  color: #fff;
+  text-align: left;
+  background: linear-gradient(to bottom, #8b8b8b 0%, #6b6b6b 49%, #5a5a5a 50%, #6b6b6b 100%);
+  border: none;
+  border-top: 2px solid #c8c8c8;
+  border-left: 2px solid #c8c8c8;
+  border-right: 2px solid #373737;
+  border-bottom: 2px solid #373737;
+  cursor: pointer;
+  outline: none;
+  transition: filter 0.05s ease;
+}
+
+.mc-menu-btn:hover {
+  filter: brightness(1.25);
+}
+
+.mc-menu-btn:active {
+  border-top: 2px solid #373737;
+  border-left: 2px solid #373737;
+  border-right: 2px solid #c8c8c8;
+  border-bottom: 2px solid #c8c8c8;
+  filter: brightness(0.9);
+}
+
+.mc-menu-btn__title {
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 #333;
+}
+
+.mc-menu-btn__desc {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #d8d8d8;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* ── Title-screen sub-views ─────────────────────────────────────── */
+
+.ts-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.ts-subhead {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.ts-hint {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #999;
+  text-shadow: 1px 1px 0 #000;
+  margin: 6px 0 0 0;
+}
+
+.ts-text {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #ccc;
+  text-shadow: 1px 1px 0 #000;
+  margin: 0 0 12px 0;
+}
+
+.ts-text strong {
+  color: #8dc860;
+}
+
+.ts-empty {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #bbb;
+  text-shadow: 1px 1px 0 #000;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.ts-back {
+  align-self: center;
+  margin-top: 14px;
+  padding: 6px 14px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ccc;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.ts-back:hover {
+  color: #fff;
+}
+
+.ts-link-btn {
+  align-self: flex-start;
+  margin-bottom: 10px;
+  padding: 0;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  color: #8dc860;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.ts-link-btn:hover {
+  color: #aef080;
+  text-decoration: underline;
+}
+
+/* ── Multiplayer setup steps ────────────────────────────────────── */
+
+.mp-steps {
+  margin: 0 0 14px 0;
+  padding-left: 20px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #ccc;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.mp-steps li {
+  margin-bottom: 6px;
+}
+
+.mp-steps code {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  color: #f0c050;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 0 4px;
+}
+
+.mp-link {
+  color: #8dc860;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.mp-link:hover {
+  color: #aef080;
+}
+
+/* ── Save list (load screen + overwrite picker) ─────────────────── */
+
+.save-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.save-list--compact {
+  max-height: 28vh;
+  margin-bottom: 4px;
+}
+
+.save-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.save-row__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  font-family: "Courier New", Courier, monospace;
+  text-align: left;
+  color: #fff;
+  background: #1a1a1a;
+  border: 2px solid #555;
+  border-top-color: #222;
+  border-left-color: #222;
+  border-bottom-color: #888;
+  border-right-color: #888;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.05s ease, border-color 0.05s ease;
+}
+
+.save-row__main:hover {
+  background: #232b1d;
+  border-color: #7ec850;
+}
+
+.save-row__main--active {
+  background: #2e4a1c;
+  border-color: #8dc860;
+}
+
+.save-row__name {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.save-row__meta {
+  font-size: 10px;
+  color: #9a9a9a;
+  letter-spacing: 0.5px;
+}
+
+.save-row__del {
+  width: 36px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: #e08080;
+  background: #2a1a1a;
+  border: 2px solid #6b2a2a;
+  border-top-color: #5a1f1f;
+  border-left-color: #5a1f1f;
+  border-bottom-color: #c87070;
+  border-right-color: #c87070;
+  cursor: pointer;
+  outline: none;
+}
+
+.save-row__del:hover {
+  filter: brightness(1.25);
+}
+
+/* ── Pause "Save Game" panel ────────────────────────────────────── */
+
+.pause-save {
+  width: 100%;
+}
+
+.pause-save__label {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  color: #ccc;
+  text-shadow: 1px 1px 0 #000;
+  margin: 4px 0 8px 0;
+}
+
 /* ── Connecting screen ──────────────────────────────────────────── */
 
 @keyframes pulse-opacity {
@@ -605,6 +887,67 @@ body {
 
 .pause-overlay__click-btn {
   margin-top: 4px;
+}
+
+.pause-overlay__note {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+  color: #bbb;
+  text-shadow: 1px 1px 0 #000;
+  margin: 14px 0 0 0;
+  text-align: center;
+}
+
+/* ── Player list (hold Tab, online) ─────────────────────────────── */
+
+.player-list {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  pointer-events: none;
+}
+
+.player-list__panel {
+  background: rgba(0, 0, 0, 0.72);
+  border: 2px solid #555;
+  border-top-color: #888;
+  border-left-color: #888;
+  border-bottom-color: #222;
+  border-right-color: #222;
+  padding: 10px 18px 12px;
+  min-width: 180px;
+}
+
+.player-list__title {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.player-list__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.player-list__item {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #ddd;
+  text-shadow: 1px 1px 0 #000;
+  padding: 3px 0;
+  text-align: center;
 }
 
 /* ── input / form legacy ────────────────────────────────────────── */

@@ -32,14 +32,29 @@ export function editsForChunks(chunkKeys, chunkSize) {
   return result;
 }
 
-export function loadEdits(seed) {
-  storageKey = `clonecraft-edits-${seed}`;
+export function loadEdits(saveId) {
+  storageKey = `clonecraft-edits-${saveId}`;
   try {
     edits = JSON.parse(window.localStorage.getItem(storageKey)) || {};
   } catch {
     edits = {};
   }
   return Object.keys(edits).length;
+}
+
+// Write the current in-memory edits to a (possibly different) save and make it
+// the active save for future autosaves. Used by the pause-menu "Save Game"
+// flow both to name the current world and to overwrite another saved world.
+// Returns the number of edits saved, or -1 if storage is unavailable.
+export function persistEditsTo(saveId) {
+  storageKey = `clonecraft-edits-${saveId}`;
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(edits));
+    return Object.keys(edits).length;
+  } catch (err) {
+    console.warn("Could not save world edits:", err);
+    return -1;
+  }
 }
 
 export function clearEdits() {
