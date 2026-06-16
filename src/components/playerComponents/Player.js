@@ -174,16 +174,25 @@ export const Player = ({ moveBools, playerStartingPostion, REF_ALLCUBES }) => {
     movementStatus.current.inWater = inWater;
 
     if (!movementStatus.current.flying) {
-      //check vertical limits
-      if (!surrData.surroundingBlocks.b) {
+      // check vertical limits. A block 2 below only keeps us grounded if it's
+      // actually solid -- water (and the other "air" floor types) must NOT
+      // count. Otherwise standing over deep water leaves onGround stuck true
+      // (water blocks ARE present in the map, so the old `!b` test saw support)
+      // and the sink branch below never ran -- the "can't sink in water" bug
+      // (#48). Now water below correctly drops us into the swim path.
+      const belowKey = surrData.surroundingBlocks.b;
+      const belowBlock = belowKey ? REF_ALLCUBES.current[belowKey] : null;
+      const belowIsSolid =
+        belowBlock && !blocktypes.floor.air.includes(belowBlock.texture);
+      if (!belowIsSolid) {
         movementStatus.current.onGround = false;
       }
 
       if (!movementStatus.current.onGround) {
         vel_y += GRAVITY * dt;
-        // water: sink slowly, swim up with jump
+        // water: sink steadily toward the floor, swim up while holding jump
         if (inWater) {
-          const maxSink = -2;
+          const maxSink = -2.5;
           vel_y = vel_y < maxSink ? maxSink : vel_y;
           if (jump.on || moveBools.current.jump) {
             vel_y = 3;
