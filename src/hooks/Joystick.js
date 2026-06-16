@@ -174,33 +174,22 @@ const JoyStick = ({myId,startx,starty,radius, moveBools, sightmovement,physicalm
         let canvas = joystickCanvasRef.current
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0,0,canvas.width,canvas.height)
+        // translucent base ring
         ctx.beginPath();
         ctx.arc(info.current.origx, info.current.origy, radius, 0, 2 * Math.PI);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "blue";
+        ctx.fillStyle = "rgba(255,255,255,0.10)";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(255,255,255,0.55)";
         ctx.stroke();
+        // knob
         ctx.beginPath();
-        ctx.arc(info.current.origx, info.current.origy, radius/2, 0, 2 * Math.PI);
-        ctx.strokeStyle = "red";
+        ctx.arc(info.current.currx, info.current.curry, radius/2.2, 0, 2 * Math.PI);
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(255,255,255,0.85)";
         ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(info.current.origx, info.current.origy, radius/info.current.sensitivity, 0, 2 * Math.PI);
-        ctx.strokeStyle = "yellow";
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(info.current.origx, info.current.origy, radius/4, 0, 2 * Math.PI);
-        ctx.strokeStyle = "orange";
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(info.current.currx, info.current.curry, radius/2, 0, 2 * Math.PI);
-        ctx.strokeStyle = "black";
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(info.current.currx, info.current.curry, radius/80, 0, 2 * Math.PI);
-        ctx.strokeStyle = "black";
-        ctx.fillStyle='green'
-        ctx.stroke();
-        ctx.fill()
     }
 
 
