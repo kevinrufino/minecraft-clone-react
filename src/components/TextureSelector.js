@@ -30,6 +30,9 @@ export const TextureSelector = ({ activeTextureREF }) => {
 
     // 1-9 select hotbar slots directly
     function handleKeyDown(event) {
+      if (useStore.getState().chatOpen) {
+        return; // typing a number in chat must not switch the hotbar
+      }
       const m = /^Digit([1-9])$/.exec(event.code);
       if (!m) {
         return;

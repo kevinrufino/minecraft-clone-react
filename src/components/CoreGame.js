@@ -9,6 +9,7 @@ import { OrbitControls } from "@react-three/drei";
 import { LoadingWorldScreen } from "./UIComponents/LoadingWorldScreen";
 import PauseOverlay from "./UIComponents/PauseOverlay";
 import { PlayerList } from "./UIComponents/PlayerList";
+import { Chat } from "./UIComponents/Chat";
 import { Inventory } from "./UIComponents/Inventory";
 import { DayNight } from "./effects/DayNight";
 import { Clouds } from "./effects/Clouds";
@@ -69,6 +70,7 @@ const CoreGame = () => {
   // can't begin until the browser has seen one)
   useEffect(() => {
     function onKey(e) {
+      if (useStore.getState().chatOpen) return; // "m" is a letter while typing
       if (e.code === "KeyM") {
         toggleSound();
       }
@@ -100,6 +102,7 @@ const CoreGame = () => {
     }
     function onKey(e) {
       const st = useStore.getState();
+      if (st.chatOpen) return; // "e" is a letter while typing in chat
       if (e.code === "KeyE") {
         if (st.inventoryOpen) {
           st.setInventoryOpen(false);
@@ -173,6 +176,7 @@ const CoreGame = () => {
       {!settings.ignoreCameraFollowPlayer && <div className="cursor centered absolute">+</div>}
       <TextureSelector activeTextureREF={activeTextureREF} />
       <PlayerList />
+      <Chat />
       <Inventory />
       <PauseOverlay />
     </>

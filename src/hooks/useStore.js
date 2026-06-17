@@ -72,6 +72,33 @@ export const useStore = create((set, get) => ({
   players: {},
   playernum: null,
 
+  // ── in-game chat ────────────────────────────────────────────────
+  // recent messages: {id, name, text, t}. Kept to the last 50.
+  chat: [],
+  // true while the chat input is focused; the movement/hotbar/mute/inventory
+  // key handlers consult it so typing doesn't drive the game. Lives in the
+  // store (not settings) so PauseOverlay reactively hides while chat is open.
+  chatOpen: false,
+  setChatOpen: (chatOpen) => set(() => ({ chatOpen })),
+  online_pushChat: (name, text) =>
+    set((s) => ({
+      chat: [
+        ...s.chat.slice(-49),
+        { id: nanoid(), name, text, t: Date.now() },
+      ],
+    })),
+  online_sendChat: (text) => {
+    const name = settings.playerName || "Player";
+    const socket = get().socket;
+    if (socket && socket.connected) {
+      socket.emit("C_chat", { worldname: null, name, text });
+    }
+    // optimistic local echo so you always see your own message immediately.
+    // The server relay should broadcast S_chat to OTHER players only (not the
+    // sender) so this doesn't double up.
+    get().online_pushChat(name, text);
+  },
+
   setTexture: (texture) => {
     set(() => ({
       texture,
