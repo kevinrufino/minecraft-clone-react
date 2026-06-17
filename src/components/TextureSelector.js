@@ -49,6 +49,15 @@ export const TextureSelector = ({ activeTextureREF }) => {
     };
   }, []);
 
+  // tapping a slot selects it -- the only way to pick a block on touch, where
+  // the number-key shortcuts aren't available (#51)
+  function selectSlot(key) {
+    if (key) {
+      setTexture(key);
+      activeTextureREF.current = key;
+    }
+  }
+
   return (
     <div className="hotbar">
       {hotbar.map((key, i) => {
@@ -56,9 +65,10 @@ export const TextureSelector = ({ activeTextureREF }) => {
         return (
           <div
             key={i}
-            className={`hotbar__slot${isActive ? " hotbar__slot--active" : ""}`}
+            className={`hotbar__slot${isActive ? " hotbar__slot--active" : ""}${key ? " hotbar__slot--filled" : ""}`}
+            onPointerDown={key ? () => selectSlot(key) : undefined}
           >
-            {key && <AtlasTile texture={key} size={38} />}
+            {key && <AtlasTile texture={key} size="80%" />}
           </div>
         );
       })}

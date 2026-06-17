@@ -51,7 +51,15 @@ export const Chunk = ({
         return Math.round(val + 0.000002 * faceNormal[ind] * -1);
       });
 
-      if (e.button === 0) {
+      // Desktop uses the mouse buttons (left=place, right=break). On
+      // touch/joystick every tap is button 0, so the on-screen Break toggle
+      // (settings.breakMode) decides whether a tap places or breaks -- this is
+      // what lets mobile players break blocks at all (#51).
+      const joy = settings.movewithJOY_BOOL;
+      const wantPlace = joy ? !settings.breakMode : e.button === 0;
+      const wantBreak = joy ? settings.breakMode : e.button === 2;
+
+      if (wantPlace) {
         const blockToAdd = contactBlock.map((val, ind) => {
           return val + faceNormal[ind];
         });
@@ -71,9 +79,7 @@ export const Chunk = ({
         if (settings.onlineEnabled) {
           online_addCube(blockToAdd, texture);
         }
-      }
-
-      if (e.button === 2) {
+      } else if (wantBreak) {
         const key = makeKey(...contactBlock);
         const block = REF_ALLCUBES.current[key];
         if (!block || block.texture === "bedrock") {

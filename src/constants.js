@@ -18,6 +18,11 @@ const settings = {
 
   showCubes: true,
 
+  // touch/joystick mode: when true, tapping a block breaks it; when false,
+  // tapping places the selected block. Toggled by the on-screen Break button
+  // (see LowerControlStrip). Ignored in desktop/mouse mode.
+  breakMode: false,
+
   viewRadius: 6, //distance (in chunks) from current chunk that chunks are shown
   outerViewRadius: 8, //distance (in chunks) we insure are built/ready to be shown
   renderDistPrecentage: 50 / 100,
