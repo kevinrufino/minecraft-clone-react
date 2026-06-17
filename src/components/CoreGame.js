@@ -70,6 +70,7 @@ const CoreGame = () => {
   // can't begin until the browser has seen one)
   useEffect(() => {
     function onKey(e) {
+      if (useStore.getState().chatOpen) return; // "m" is a letter while typing
       if (e.code === "KeyM") {
         toggleSound();
       }
@@ -101,6 +102,7 @@ const CoreGame = () => {
     }
     function onKey(e) {
       const st = useStore.getState();
+      if (st.chatOpen) return; // "e" is a letter while typing in chat
       if (e.code === "KeyE") {
         if (st.inventoryOpen) {
           st.setInventoryOpen(false);

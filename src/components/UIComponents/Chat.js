@@ -1,82 +1,79 @@
 import { useEffect, useRef, useState } from "react";
-import settings from "../../constants";
 import { useStore } from "../../hooks/useStore";
 
 // In-game text chat (#50). Press T or Enter while playing to open the input,
 // type a message, Enter to send (Esc to cancel). Recent messages fade in the
 // bottom-left while closed and stay pinned while open -- classic Minecraft.
 //
-// Sending goes through the store (online_sendChat -> socket "C_chat"), and the
-// socket listener feeds incoming "S_chat" back in. Only shown in multiplayer.
+// Sending goes through the store (online_sendChat): it echoes locally right
+// away and, when online, emits socket "C_chat"; the socket listener feeds
+// incoming "S_chat" back in. Works single-player too -- you just see your own
+// lines (and the keys still respond, which is what you'd expect).
 
 const VISIBLE_MS = 9000; // how long a message lingers after arriving (when closed)
 const MAX_LEN = 120;
 
+function requestLock() {
+  const canvas = document.querySelector("canvas");
+  if (canvas) canvas.requestPointerLock();
+}
+
 export function Chat() {
   const chat = useStore((s) => s.chat);
+  const chatOpen = useStore((s) => s.chatOpen);
   const sendChat = useStore((s) => s.online_sendChat);
-  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   // re-render periodically so closed messages fade out on time
   const [, force] = useState(0);
   const inputRef = useRef(null);
 
+  // close the input and re-lock the pointer so play resumes. (After Esc the
+  // browser briefly blocks re-locking; if that happens PauseOverlay shows,
+  // since it reacts to chatOpen -- a click resumes from there.)
   function close() {
-    setOpen(false);
+    useStore.getState().setChatOpen(false);
     setDraft("");
-    settings.chatOpen = false;
+    requestLock();
   }
 
-  // open chat on T / Enter, but only while actually playing (pointer locked)
+  // Open on T / Enter, but only while actually playing (pointer locked).
+  // Opening releases the pointer lock so the field can take input -- this frees
+  // the cursor and stops the camera from following the mouse while you type.
   useEffect(() => {
     function onKeyDown(e) {
-      if (open || !settings.onlineEnabled) {
-        return;
-      }
+      const st = useStore.getState();
+      if (st.chatOpen) return;
       if (e.code === "KeyT" || e.code === "Enter") {
         if (!document.pointerLockElement) {
-          return; // not in-game (paused / menu)
+          return; // not in-game (paused / menu / title)
         }
         e.preventDefault(); // don't leak the "t" into the field
-        setOpen(true);
-        settings.chatOpen = true;
+        st.setChatOpen(true);
+        document.exitPointerLock();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  }, []);
 
   // focus the field when it opens
   useEffect(() => {
-    if (open && inputRef.current) {
+    if (chatOpen && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [open]);
-
-  // if pointer lock is lost (Esc/pause) while chat is open, close it so the
-  // input never sticks around over the pause menu
-  useEffect(() => {
-    function onLockChange() {
-      if (!document.pointerLockElement) {
-        close();
-      }
-    }
-    document.addEventListener("pointerlockchange", onLockChange);
-    return () =>
-      document.removeEventListener("pointerlockchange", onLockChange);
-  }, []);
+  }, [chatOpen]);
 
   // tick a re-render while closed messages are still visible so they fade out
   useEffect(() => {
-    if (open || chat.length === 0) {
+    if (chatOpen || chat.length === 0) {
       return;
     }
     const id = setInterval(() => force((n) => n + 1), 1000);
     return () => clearInterval(id);
-  }, [open, chat.length]);
+  }, [chatOpen, chat.length]);
 
   function onInputKeyDown(e) {
-    // keep movement/hotbar handlers from seeing the keystroke
+    // keep the movement / hotbar handlers from also seeing the keystroke
     e.stopPropagation();
     if (e.code === "Enter") {
       const text = draft.trim().slice(0, MAX_LEN);
@@ -89,20 +86,17 @@ export function Chat() {
     }
   }
 
-  if (!settings.onlineEnabled) {
-    return null;
-  }
-
   const now = Date.now();
-  const shown = (open ? chat : chat.filter((m) => now - m.t < VISIBLE_MS)).slice(
-    -12,
-  );
-  if (!open && shown.length === 0) {
+  const shown = (chatOpen
+    ? chat
+    : chat.filter((m) => now - m.t < VISIBLE_MS)
+  ).slice(-12);
+  if (!chatOpen && shown.length === 0) {
     return null;
   }
 
   return (
-    <div className={`chat${open ? " chat--open" : ""}`}>
+    <div className={`chat${chatOpen ? " chat--open" : ""}`}>
       {shown.length > 0 && (
         <ul className="chat__log">
           {shown.map((m) => (
@@ -114,7 +108,7 @@ export function Chat() {
           ))}
         </ul>
       )}
-      {open && (
+      {chatOpen && (
         <input
           ref={inputRef}
           className="chat__input"

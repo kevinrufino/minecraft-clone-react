@@ -72,9 +72,14 @@ export const useStore = create((set, get) => ({
   players: {},
   playernum: null,
 
-  // ── in-game chat (multiplayer) ──────────────────────────────────
+  // ── in-game chat ────────────────────────────────────────────────
   // recent messages: {id, name, text, t}. Kept to the last 50.
   chat: [],
+  // true while the chat input is focused; the movement/hotbar/mute/inventory
+  // key handlers consult it so typing doesn't drive the game. Lives in the
+  // store (not settings) so PauseOverlay reactively hides while chat is open.
+  chatOpen: false,
+  setChatOpen: (chatOpen) => set(() => ({ chatOpen })),
   online_pushChat: (name, text) =>
     set((s) => ({
       chat: [

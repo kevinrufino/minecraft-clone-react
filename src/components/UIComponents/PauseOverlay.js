@@ -13,6 +13,7 @@ const CONTROLS = [
   ["1-9 / Wheel", "Select block"],
   ["M", "Mute sound"],
   ["E", "Inventory"],
+  ["T / Enter", "Chat"],
   ["Esc", "Pause"],
 ];
 
@@ -85,6 +86,7 @@ const PauseOverlay = () => {
   const [saves, setSaves] = useState([]);
 
   const inventoryOpen = useStore((s) => s.inventoryOpen);
+  const chatOpen = useStore((s) => s.chatOpen);
   const paused = useStore((s) => s.paused);
   const setPaused = useStore((s) => s.setPaused);
 
@@ -103,9 +105,9 @@ const PauseOverlay = () => {
     return () => document.removeEventListener("pointerlockchange", onLockChange);
   }, []);
 
-  // The creative inventory releases pointer lock on purpose — don't treat that
-  // as a pause
-  if (inventoryOpen) return null;
+  // The creative inventory and chat both release pointer lock on purpose —
+  // don't treat that as a pause
+  if (inventoryOpen || chatOpen) return null;
 
   if (mobile) {
     // Mobile only shows the overlay while explicitly paused (no "Click to play"
