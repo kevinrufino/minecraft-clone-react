@@ -10,6 +10,21 @@ import {
 // Where players grab the multiplayer server to self-host.
 const SERVER_REPO = "https://github.com/GreyDaCaLa/ReactMineCraftCloneServer";
 
+// Touch devices need the on-screen joystick controls: mobile browsers don't
+// support the Pointer Lock API (iOS Safari has none), so the desktop
+// "Click to play" → requestPointerLock() path silently dead-ends there. Detect
+// by touch capability rather than width -- many phones are wider than 400px
+// (especially in landscape), and a width check would wrongly route them to the
+// pointer-lock path. (#51)
+function isTouchDevice() {
+  if (typeof window === "undefined") return false;
+  return (
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
 function formatWhen(ts) {
   if (!ts) return "";
   try {
@@ -33,7 +48,7 @@ const TitleScreen = ({ playerGivenGameSettings }) => {
 
   function start({ onlineEnabled, seed, saveId }) {
     playerGivenGameSettings({
-      movewithJOY_BOOL: window.innerWidth < 400,
+      movewithJOY_BOOL: isTouchDevice(),
       onlineEnabled,
       playerName: name.trim() || "Player",
       seed,

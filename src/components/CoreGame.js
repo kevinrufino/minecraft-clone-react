@@ -148,7 +148,22 @@ const CoreGame = () => {
 
         {orbitalControlsEnabled && <OrbitControls />}
       </Canvas>
-      {settings.movewithJOY_BOOL && <LowerControlStrip moveBools={moveBools} />}
+      {settings.movewithJOY_BOOL && (
+        <>
+          <LowerControlStrip moveBools={moveBools} />
+          {/* touch has no Esc key, so the pause/menu lives on-screen */}
+          <button
+            className="mobile-pause-btn"
+            aria-label="Pause"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              useStore.getState().setPaused(true);
+            }}
+          >
+            <span className="mobile-pause-btn__bars" />
+          </button>
+        </>
+      )}
       {showUIContent && (
         <>
           <Menu />

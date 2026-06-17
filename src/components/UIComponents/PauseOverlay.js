@@ -85,6 +85,12 @@ const PauseOverlay = () => {
   const [saves, setSaves] = useState([]);
 
   const inventoryOpen = useStore((s) => s.inventoryOpen);
+  const paused = useStore((s) => s.paused);
+  const setPaused = useStore((s) => s.setPaused);
+
+  // Touch devices have no pointer lock; the on-screen pause button toggles the
+  // `paused` store flag instead. Everything else (save/quit/settings) is shared.
+  const mobile = settings.movewithJOY_BOOL;
 
   useEffect(() => {
     function onLockChange() {
@@ -97,17 +103,30 @@ const PauseOverlay = () => {
     return () => document.removeEventListener("pointerlockchange", onLockChange);
   }, []);
 
-  // Don't render anything on touch/joystick devices
-  if (settings.movewithJOY_BOOL) return null;
-
   // The creative inventory releases pointer lock on purpose — don't treat that
   // as a pause
   if (inventoryOpen) return null;
 
-  // Pointer is locked — game is running, no overlay needed
-  if (locked) return null;
+  if (mobile) {
+    // Mobile only shows the overlay while explicitly paused (no "Click to play"
+    // gate, since there's no pointer lock to acquire).
+    if (!paused) return null;
+  } else if (locked) {
+    // Pointer is locked — game is running, no overlay needed
+    return null;
+  }
 
-  const isPaused = hasBeenLocked;
+  // Mobile is always in the "paused panel" state (never the click-to-play gate).
+  const isPaused = mobile ? true : hasBeenLocked;
+
+  // Resume play: re-lock the pointer on desktop, clear the pause flag on mobile.
+  function resume() {
+    if (mobile) {
+      setPaused(false);
+    } else {
+      requestLock();
+    }
+  }
 
   function quitToTitle(e) {
     e.stopPropagation();
@@ -165,11 +184,11 @@ const PauseOverlay = () => {
       className="pause-overlay"
       // click-anywhere only on the first "Click to play" screen; when paused
       // a stray click must not re-lock and swallow the panel buttons
-      onClick={isPaused ? undefined : requestLock}
+      onClick={isPaused ? undefined : resume}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (!isPaused && (e.key === "Enter" || e.key === " ")) requestLock();
+        if (!isPaused && (e.key === "Enter" || e.key === " ")) resume();
       }}
     >
       <div className="pause-overlay__panel" onClick={(e) => e.stopPropagation()}>
@@ -227,7 +246,8 @@ const PauseOverlay = () => {
               </button>
             </div>
           </div>
-        ) : (
+        ) : mobile ? null : (
+          // desktop key/mouse hints — not relevant to touch controls
           <ControlsLegend />
         )}
 
@@ -240,7 +260,7 @@ const PauseOverlay = () => {
                 className="mc-play-btn"
                 onPointerDown={(e) => {
                   e.stopPropagation();
-                  requestLock();
+                  resume();
                 }}
               >
                 Back to Game

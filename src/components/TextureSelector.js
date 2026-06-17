@@ -65,10 +65,10 @@ export const TextureSelector = ({ activeTextureREF }) => {
         return (
           <div
             key={i}
-            className={`hotbar__slot${isActive ? " hotbar__slot--active" : ""}${slot.key ? " hotbar__slot--filled" : ""}`}
-            onPointerDown={slot.key ? () => selectSlot(slot.key) : undefined}
+            className={`hotbar__slot${isActive ? " hotbar__slot--active" : ""}${key ? " hotbar__slot--filled" : ""}`}
+            onPointerDown={key ? () => selectSlot(key) : undefined}
           >
-            {key && <AtlasTile texture={key} size={38} />}
+            {key && <AtlasTile texture={key} size="80%" />}
           </div>
         );
       })}

@@ -63,6 +63,9 @@ export const useStore = create((set, get) => ({
   ],
   selectedSlot: 0,
   inventoryOpen: false,
+  // touch/joystick pause -- desktop pauses by releasing pointer lock, but mobile
+  // has no pointer lock, so the on-screen pause button drives this flag instead
+  paused: false,
 
   establishedConn: false,
   socket: null,
@@ -87,6 +90,9 @@ export const useStore = create((set, get) => ({
   },
   setInventoryOpen: (inventoryOpen) => {
     set(() => ({ inventoryOpen }));
+  },
+  setPaused: (paused) => {
+    set(() => ({ paused }));
   },
 
   online_addCube: (pos, texture) => {

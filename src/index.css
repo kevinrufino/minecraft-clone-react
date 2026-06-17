@@ -130,6 +130,55 @@ body {
   border-color: rgba(141, 200, 96, 0.9);
 }
 
+/* on-screen pause/menu button (touch has no Esc key) */
+.mobile-pause-btn {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 40;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mobile-pause-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* two vertical bars = pause glyph, drawn in CSS so it renders on any font */
+.mobile-pause-btn__bars {
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+
+.mobile-pause-btn__bars::before,
+.mobile-pause-btn__bars::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 5px;
+  height: 18px;
+  background: #fff;
+}
+
+.mobile-pause-btn__bars::before {
+  left: 3px;
+}
+
+.mobile-pause-btn__bars::after {
+  right: 3px;
+}
+
 /* ── Minecraft text classes (kept for backward compat) ──────────── */
 
 .minecraft-text {
@@ -817,6 +866,9 @@ body {
 /* ── Hotbar ─────────────────────────────────────────────────────── */
 
 .hotbar {
+  /* slot size shrinks so all 9 slots + gaps/padding fit any viewport width
+     (~44px of gaps+padding+border overhead), capped at the desktop 48px */
+  --hotbar-slot: min(48px, calc((100vw - 52px) / 9));
   position: fixed;
   bottom: 16px;
   left: 50%;
@@ -825,6 +877,8 @@ body {
   gap: 4px;
   z-index: 20;
   padding: 4px;
+  max-width: 100vw;
+  box-sizing: border-box;
   background: rgba(0, 0, 0, 0.45);
   border: 2px solid #555;
   border-top-color: #888;
@@ -834,8 +888,9 @@ body {
 }
 
 .hotbar__slot {
-  width: 48px;
-  height: 48px;
+  width: var(--hotbar-slot);
+  height: var(--hotbar-slot);
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
